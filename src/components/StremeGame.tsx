@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { sdk } from '@farcaster/frame-sdk';
 import { VirtualJoystick } from './VirtualJoystick';
 import './StremeGame.css';
 
@@ -76,7 +75,6 @@ export function StremeGame() {
   const [stremeinu, setStremeinu] = useState({ x: 100, y: 300 });
   const [obstacles, setObstacles] = useState<GameObject[]>([]);
   const [trendingTokens, setTrendingTokens] = useState<StremeToken[]>([]);
-  const [current, setCurrent] = useState(0);
   const [riverFlow, setRiverFlow] = useState(0);
   const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, speed: number}>>([]);
   const [joystickDirection, setJoystickDirection] = useState<'up' | 'down' | 'left' | 'right' | null>(null);
@@ -165,7 +163,6 @@ export function StremeGame() {
     });
     setStremeinu({ x: 100, y: 300 });
     setObstacles([]);
-    setCurrent(0);
     setRiverFlow(0);
     setParticles([]);
   }, []);
@@ -296,9 +293,6 @@ export function StremeGame() {
     const gameLoop = (timestamp: number) => {
       // Update river flow
       setRiverFlow(prev => (prev + 1) % 360);
-      
-      // Update current flow
-      setCurrent(prev => (prev + 1) % 360);
       
       // Spawn particles
       if (timestamp - lastParticleTime.current > 100) {

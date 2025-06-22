@@ -1,24 +1,22 @@
 import { useState } from 'react';
 import { sdk } from '@farcaster/frame-sdk';
-import { EMBED_CONFIGS, createShareableEmbed } from '../lib/embeds';
 import './ShareButton.css';
 
 interface ShareButtonProps {
-  variant?: 'default' | 'success' | 'features' | 'neynar' | 'game';
+  variant?: 'game';
   className?: string;
 }
 
-export function ShareButton({ variant = 'default', className = '' }: ShareButtonProps) {
+export function ShareButton({ variant = 'game', className = '' }: ShareButtonProps) {
   const [isSharing, setIsSharing] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
 
   const handleShare = async () => {
     setIsSharing(true);
     try {
-      // Create a cast with the app embed
+      // Create a cast with the game
       await sdk.actions.composeCast({
-        text: `🚀 Check out this awesome Farcaster Mini App! Built with React, TypeScript, and Vite. Features Neynar integration and a beautiful purple gradient theme!`,
-        embeds: [createShareableEmbed(variant)]
+        text: `🎮 Playing Stremeinu's River Adventure! Collect trending tokens and stake them for rewards! Built with React, TypeScript, and the Farcaster SDK. 🌊`
       });
     } catch (error) {
       console.error('Failed to share:', error);
@@ -30,8 +28,7 @@ export function ShareButton({ variant = 'default', className = '' }: ShareButton
 
   const handleCopyLink = async () => {
     try {
-      const shareUrl = createShareableEmbed(variant);
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(window.location.href);
       
       // Show a brief success message
       const button = document.querySelector('.share-button') as HTMLElement;
@@ -48,21 +45,6 @@ export function ShareButton({ variant = 'default', className = '' }: ShareButton
     setShowOptions(false);
   };
 
-  const getButtonText = () => {
-    switch (variant) {
-      case 'success':
-        return '🎉 Share Success';
-      case 'features':
-        return '✨ Share Features';
-      case 'neynar':
-        return '🔗 Share Neynar';
-      case 'game':
-        return '🎮 Share Game';
-      default:
-        return '🚀 Share App';
-    }
-  };
-
   return (
     <div className={`share-container ${className}`}>
       <button
@@ -70,7 +52,7 @@ export function ShareButton({ variant = 'default', className = '' }: ShareButton
         onClick={() => setShowOptions(!showOptions)}
         disabled={isSharing}
       >
-        {isSharing ? '📤 Sharing...' : getButtonText()}
+        {isSharing ? '📤 Sharing...' : '🎮 Share Game'}
       </button>
       
       {showOptions && (
@@ -100,16 +82,12 @@ export function ShareButton({ variant = 'default', className = '' }: ShareButton
   );
 }
 
-// Quick share buttons for different scenarios
+// Quick share buttons
 export function QuickShareButtons() {
   return (
     <div className="quick-share-buttons">
-      <h3>Share Your Experience:</h3>
+      <h3>Share Your Game:</h3>
       <div className="share-grid">
-        <ShareButton variant="default" />
-        <ShareButton variant="success" />
-        <ShareButton variant="features" />
-        <ShareButton variant="neynar" />
         <ShareButton variant="game" />
       </div>
     </div>

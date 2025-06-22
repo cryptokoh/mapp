@@ -7,7 +7,6 @@ import { SettingsPanel } from './components/SettingsPanel'
 import './App.css'
 
 function App() {
-  const [userFid, setUserFid] = useState<number | null>(null)
   const [showSplash, setShowSplash] = useState(true)
   const [showSettings, setShowSettings] = useState(false)
 
@@ -17,9 +16,8 @@ function App() {
       try {
         const context = await sdk.context
         const user = context.user
-        if (user?.fid) {
-          setUserFid(user.fid)
-        }
+        // User context available if needed for future features
+        console.log('User context:', user)
       } catch (error) {
         console.error('Error initializing app:', error)
       }

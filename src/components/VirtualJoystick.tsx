@@ -16,11 +16,14 @@ export function VirtualJoystick({ onMove, disabled = false }: VirtualJoystickPro
   const [position, setPosition] = useState<JoystickPosition>({ x: 0, y: 0 });
   const [holdTime, setHoldTime] = useState(0);
   const [multiplier, setMultiplier] = useState(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const [joystickPosition, setJoystickPosition] = useState({ x: 0, y: 0 });
+  const [basePosition, setBasePosition] = useState({ x: 0, y: 0 });
+  const [thumbPosition, setThumbPosition] = useState({ x: 0, y: 0 });
   
   const joystickRef = useRef<HTMLDivElement>(null);
   const thumbRef = useRef<HTMLDivElement>(null);
   const holdTimerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
-  const animationRef = useRef<number | undefined>(undefined);
 
   const JOYSTICK_RADIUS = 60;
   const THUMB_RADIUS = 25;
