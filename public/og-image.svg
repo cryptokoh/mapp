@@ -28,30 +28,17 @@
   <!-- Main content area -->
   <rect x="150" y="100" width="900" height="430" rx="30" fill="#FFFFFF" opacity="0.15"/>
   
-  <!-- Large inu illustration -->
+  <!-- Large stremeinu illustration -->
   <g transform="translate(300, 315)">
-    <!-- Main face circle -->
-    <circle cx="0" cy="0" r="80" fill="#FFFFFF" opacity="0.9" filter="url(#ogGlow)"/>
-    
-    <!-- Ears -->
-    <ellipse cx="-32" cy="-55" rx="18" ry="25" fill="#FFFFFF" opacity="0.8"/>
-    <ellipse cx="32" cy="-55" rx="18" ry="25" fill="#FFFFFF" opacity="0.8"/>
-    
-    <!-- Eyes -->
-    <circle cx="-25" cy="-15" r="8" fill="#333333"/>
-    <circle cx="25" cy="-15" r="8" fill="#333333"/>
-    <circle cx="-25" cy="-15" r="4" fill="#FFFFFF"/>
-    <circle cx="25" cy="-15" r="4" fill="#FFFFFF"/>
-    
-    <!-- Nose -->
-    <ellipse cx="0" cy="15" rx="6" ry="4" fill="#FF6B9D"/>
-    
-    <!-- Mouth -->
-    <path d="M -18 30 Q 0 40 18 30" stroke="#333333" stroke-width="3" fill="none"/>
-    
-    <!-- Cheeks -->
-    <circle cx="-45" cy="15" r="12" fill="#FFB3D9" opacity="0.7"/>
-    <circle cx="45" cy="15" r="12" fill="#FFB3D9" opacity="0.7"/>
+    <image 
+      href="/stremeinu.png" 
+      x="-80" 
+      y="-80" 
+      width="160" 
+      height="160" 
+      filter="url(#ogGlow)"
+      opacity="0.9"
+    />
   </g>
   
   <!-- Text content -->
