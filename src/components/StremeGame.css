@@ -369,4 +369,91 @@
   .token-name {
     color: #F9FAFB;
   }
+}
+
+/* River Background */
+.river-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.river-flow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0.4;
+  animation: riverFlow 8s ease-in-out infinite;
+}
+
+.river-flow-2 {
+  animation-delay: -4s;
+  opacity: 0.2;
+}
+
+@keyframes riverFlow {
+  0%, 100% { transform: translateX(0px) skewY(-1deg); }
+  50% { transform: translateX(-10px) skewY(-1deg); }
+}
+
+/* River Particles */
+.river-particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: particleFloat 3s linear infinite;
+}
+
+@keyframes particleFloat {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-20px) translateX(10px);
+    opacity: 0;
+  }
+}
+
+/* Game Paused Screen */
+.game-paused {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 30px;
+  border-radius: 16px;
+  text-align: center;
+  z-index: 20;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(139, 92, 246, 0.5);
+}
+
+.game-paused h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.5rem;
+  color: #8B5CF6;
+}
+
+.game-paused p {
+  margin: 0;
+  font-size: 1rem;
+  opacity: 0.9;
 } 

@@ -521,3 +521,36 @@
 .debug-button:active {
   transform: translateY(0);
 }
+
+/* Header Actions */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.settings-button {
+  background: linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-button:hover {
+  transform: translateY(-2px) rotate(90deg);
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+}
+
+.settings-button:active {
+  transform: translateY(0) rotate(90deg);
+}

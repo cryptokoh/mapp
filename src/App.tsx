@@ -4,6 +4,8 @@ import { testNeynarConnection, getNeynarStatus, quickNeynarTest } from './lib/ne
 import { getEmbedConfigFromURL, updateEmbed } from './lib/embeds'
 import { ShareButton, QuickShareButtons } from './components/ShareButton'
 import { StremeGame } from './components/StremeGame'
+import { SplashScreen } from './components/SplashScreen'
+import { SettingsPanel } from './components/SettingsPanel'
 import './App.css'
 
 function App() {
@@ -11,10 +13,12 @@ function App() {
   const [neynarDetails, setNeynarDetails] = useState<any>(null)
   const [currentState, setCurrentState] = useState<string>('default')
   const [userFid, setUserFid] = useState<number | null>(null)
+  const [showSplash, setShowSplash] = useState(true)
+  const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => {
-    // Hide the splash screen as soon as the UI is ready
-    sdk.actions.ready()
+    // Expose test function to window for debugging
+    (window as any).testNeynar = quickNeynarTest;
 
     // Get user context and handle URL parameters
     const initializeApp = async () => {
@@ -64,6 +68,11 @@ function App() {
 
     testConnection()
   }, [])
+
+  const handleSplashComplete = () => {
+    setShowSplash(false)
+    setCurrentState('game')
+  }
 
   const renderStateContent = () => {
     switch (currentState) {
@@ -230,24 +239,49 @@ function App() {
   }
 
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <h1>🚀 Farcaster Mini App</h1>
-        <ShareButton variant={currentState as any} />
-      </header>
-      
-      <main className="app-main">
-        {renderStateContent()}
-      </main>
-      
-      <footer className="app-footer">
-        <QuickShareButtons />
-        <div className="app-info">
-          <p>Built with ❤️ using React, TypeScript, and the Farcaster SDK</p>
-          <p>Deployed on Netlify • Powered by Neynar • Game powered by <a href="https://streme.fun" target="_blank" rel="noopener noreferrer">Streme.Fun</a></p>
+    <>
+      {/* Splash Screen */}
+      {showSplash && (
+        <SplashScreen onComplete={handleSplashComplete} />
+      )}
+
+      {/* Main App */}
+      {!showSplash && (
+        <div className="app-container">
+          <header className="app-header">
+            <h1>🎮 Stremeinu's Adventure</h1>
+            <div className="header-actions">
+              <ShareButton variant={currentState as any} />
+              <button 
+                className="settings-button"
+                onClick={() => setShowSettings(true)}
+                title="Settings & Debug"
+              >
+                ⚙️
+              </button>
+            </div>
+          </header>
+          
+          <main className="app-main">
+            {renderStateContent()}
+          </main>
+          
+          <footer className="app-footer">
+            <QuickShareButtons />
+            <div className="app-info">
+              <p>Built with ❤️ using React, TypeScript, and the Farcaster SDK</p>
+              <p>Deployed on Netlify • Powered by Neynar • Game powered by <a href="https://streme.fun" target="_blank" rel="noopener noreferrer">Streme.Fun</a></p>
+            </div>
+          </footer>
         </div>
-      </footer>
-    </div>
+      )}
+
+      {/* Settings Panel */}
+      <SettingsPanel 
+        isOpen={showSettings} 
+        onClose={() => setShowSettings(false)} 
+      />
+    </>
   )
 }
 

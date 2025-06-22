@@ -21,6 +21,7 @@ interface GameState {
   lives: number;
   gameOver: boolean;
   level: number;
+  isPaused: boolean;
 }
 
 interface GameObject {
@@ -31,6 +32,8 @@ interface GameObject {
   height: number;
   speed: number;
   token?: StremeToken;
+  rotation: number;
+  scale: number;
 }
 
 export function StremeGame() {
@@ -40,17 +43,21 @@ export function StremeGame() {
     lives: 3,
     gameOver: false,
     level: 1,
+    isPaused: false,
   });
   
   const [stremeinu, setStremeinu] = useState({ x: 100, y: 300 });
   const [obstacles, setObstacles] = useState<GameObject[]>([]);
   const [trendingTokens, setTrendingTokens] = useState<StremeToken[]>([]);
   const [current, setCurrent] = useState(0);
+  const [riverFlow, setRiverFlow] = useState(0);
+  const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, speed: number}>>([]);
   
   const gameRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>();
   const lastObstacleTime = useRef<number>(0);
   const lastTokenFetch = useRef<number>(0);
+  const lastParticleTime = useRef<number>(0);
 
   // Fetch trending tokens from Streme.Fun API
   const fetchTrendingTokens = useCallback(async () => {
@@ -79,47 +86,72 @@ export function StremeGame() {
       lives: 3,
       gameOver: false,
       level: 1,
+      isPaused: false,
     });
     setStremeinu({ x: 100, y: 300 });
     setObstacles([]);
     setCurrent(0);
+    setRiverFlow(0);
+    setParticles([]);
   }, []);
 
   // Handle keyboard input
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!gameState.isPlaying) return;
+      if (!gameState.isPlaying || gameState.isPaused) return;
       
-      setStremeinu(prev => {
-        const newY = prev.y;
-        const step = 50;
-        
-        switch (e.key) {
-          case 'ArrowUp':
-          case 'w':
-          case 'W':
-            return { ...prev, y: Math.max(50, newY - step) };
-          case 'ArrowDown':
-          case 's':
-          case 'S':
-            return { ...prev, y: Math.min(550, newY + step) };
-          default:
-            return prev;
-        }
-      });
+      switch (e.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+          setStremeinu(prev => ({ ...prev, y: Math.max(50, prev.y - 50) }));
+          break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          setStremeinu(prev => ({ ...prev, y: Math.min(550, prev.y + 50) }));
+          break;
+        case ' ':
+          e.preventDefault();
+          setGameState(prev => ({ ...prev, isPaused: !prev.isPaused }));
+          break;
+        case 'r':
+        case 'R':
+          if (gameState.gameOver) {
+            startGame();
+          }
+          break;
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState.isPlaying]);
+  }, [gameState.isPlaying, gameState.isPaused, gameState.gameOver, startGame]);
 
   // Game loop
   useEffect(() => {
-    if (!gameState.isPlaying) return;
+    if (!gameState.isPlaying || gameState.isPaused) return;
 
     const gameLoop = (timestamp: number) => {
+      // Update river flow
+      setRiverFlow(prev => (prev + 1) % 360);
+      
       // Update current flow
       setCurrent(prev => (prev + 1) % 360);
+      
+      // Spawn particles
+      if (timestamp - lastParticleTime.current > 100) {
+        setParticles(prev => {
+          const newParticle = {
+            id: timestamp,
+            x: Math.random() * 800,
+            y: 600,
+            speed: 2 + Math.random() * 3
+          };
+          return [...prev.slice(-19), newParticle];
+        });
+        lastParticleTime.current = timestamp;
+      }
       
       // Spawn obstacles
       if (timestamp - lastObstacleTime.current > 2000 - gameState.level * 100) {
@@ -133,6 +165,8 @@ export function StremeGame() {
             height: 60,
             speed: 3 + gameState.level * 0.5,
             token: randomToken,
+            rotation: Math.random() * 360,
+            scale: 0.8 + Math.random() * 0.4,
           };
           setObstacles(prev => [...prev, newObstacle]);
           lastObstacleTime.current = timestamp;
@@ -145,6 +179,7 @@ export function StremeGame() {
           .map(obstacle => ({
             ...obstacle,
             x: obstacle.x - obstacle.speed,
+            rotation: obstacle.rotation + 2,
           }))
           .filter(obstacle => obstacle.x > -100);
 
@@ -166,6 +201,16 @@ export function StremeGame() {
 
         return updated;
       });
+
+      // Update particles
+      setParticles(prev => 
+        prev
+          .map(particle => ({
+            ...particle,
+            y: particle.y - particle.speed,
+          }))
+          .filter(particle => particle.y > -20)
+      );
 
       // Update score
       setGameState(prev => ({
@@ -201,7 +246,7 @@ export function StremeGame() {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [gameState.isPlaying, gameState.lives, gameState.score, gameState.level, stremeinu, trendingTokens]);
+  }, [gameState.isPlaying, gameState.isPaused, gameState.lives, gameState.score, gameState.level, stremeinu, trendingTokens]);
 
   // Fetch tokens periodically
   useEffect(() => {
@@ -219,7 +264,7 @@ export function StremeGame() {
   return (
     <div className="streme-game">
       <div className="game-header">
-        <h2>🎮 Stremeinu's Adventure</h2>
+        <h2>🌊 Stremeinu's River Adventure</h2>
         <div className="game-stats">
           <span>Score: {gameState.score}</span>
           <span>Lives: {'❤️'.repeat(gameState.lives)}</span>
@@ -231,10 +276,11 @@ export function StremeGame() {
         {!gameState.isPlaying && !gameState.gameOver && (
           <div className="game-start">
             <h3>🚀 Ready to Float?</h3>
-            <p>Help Stremeinu dodge trending Streme tokens!</p>
+            <p>Help Stremeinu navigate the river of trending tokens!</p>
             <p>Use <strong>Arrow Keys</strong> or <strong>W/S</strong> to move</p>
+            <p><strong>Space</strong> to pause, <strong>R</strong> to restart</p>
             <button onClick={startGame} className="start-button">
-              🎮 Start Game
+              🎮 Start Adventure
             </button>
           </div>
         )}
@@ -250,15 +296,42 @@ export function StremeGame() {
           </div>
         )}
 
+        {gameState.isPaused && (
+          <div className="game-paused">
+            <h3>⏸️ Game Paused</h3>
+            <p>Press <strong>Space</strong> to resume</p>
+          </div>
+        )}
+
         {gameState.isPlaying && (
           <>
-            {/* Current flow effect */}
-            <div 
-              className="current-flow"
-              style={{ 
-                background: `linear-gradient(${current}deg, rgba(139, 92, 246, 0.3), rgba(168, 85, 247, 0.3))` 
-              }}
-            />
+            {/* River Background */}
+            <div className="river-background">
+              <div 
+                className="river-flow"
+                style={{ 
+                  background: `linear-gradient(${riverFlow}deg, rgba(139, 92, 246, 0.3), rgba(168, 85, 247, 0.3))` 
+                }}
+              />
+              <div 
+                className="river-flow river-flow-2"
+                style={{ 
+                  background: `linear-gradient(${riverFlow + 45}deg, rgba(139, 92, 246, 0.2), rgba(168, 85, 247, 0.2))` 
+                }}
+              />
+            </div>
+            
+            {/* Floating Particles */}
+            {particles.map(particle => (
+              <div
+                key={particle.id}
+                className="river-particle"
+                style={{
+                  left: `${particle.x}px`,
+                  top: `${particle.y}px`,
+                }}
+              />
+            ))}
             
             {/* Stremeinu character */}
             <div
@@ -281,6 +354,7 @@ export function StremeGame() {
                   top: `${obstacle.y}px`,
                   width: `${obstacle.width}px`,
                   height: `${obstacle.height}px`,
+                  transform: `rotate(${obstacle.rotation}deg) scale(${obstacle.scale})`,
                 }}
               >
                 {obstacle.token && (
@@ -311,8 +385,9 @@ export function StremeGame() {
         <h4>🎯 How to Play:</h4>
         <ul>
           <li>Use <strong>Arrow Keys</strong> or <strong>W/S</strong> to move Stremeinu up and down</li>
-          <li>Dodge the trending Streme tokens coming from the right</li>
+          <li>Dodge the trending Streme tokens floating down the river</li>
           <li>Each token shows real market data from <a href="https://streme.fun" target="_blank" rel="noopener noreferrer">Streme.Fun</a></li>
+          <li>Press <strong>Space</strong> to pause, <strong>R</strong> to restart</li>
           <li>Survive as long as possible and beat your high score!</li>
         </ul>
       </div>
