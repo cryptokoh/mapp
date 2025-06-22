@@ -1,0 +1,372 @@
+.streme-game {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.game-header {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.game-header h2 {
+  margin: 0 0 15px 0;
+  color: #374151;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.game-stats {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+.game-stats span {
+  background: linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+}
+
+.game-container {
+  position: relative;
+  width: 800px;
+  height: 600px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 3px solid rgba(139, 92, 246, 0.3);
+}
+
+.current-flow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0.3;
+  pointer-events: none;
+  animation: flow 3s ease-in-out infinite;
+}
+
+@keyframes flow {
+  0%, 100% { transform: translateX(0px); }
+  50% { transform: translateX(-10px); }
+}
+
+.stremeinu-character {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  z-index: 10;
+  transition: top 0.1s ease-out;
+}
+
+.stremeinu-character img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+  animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-5px) rotate(5deg); }
+}
+
+.obstacle {
+  position: absolute;
+  z-index: 5;
+  transition: left 0.1s linear;
+}
+
+.token-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(139, 92, 246, 0.3);
+  min-width: 80px;
+}
+
+.token-info img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  margin-bottom: 4px;
+}
+
+.token-details {
+  text-align: center;
+  font-size: 12px;
+}
+
+.token-name {
+  display: block;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 2px;
+}
+
+.price-change {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.price-change.positive {
+  color: #10B981;
+}
+
+.price-change.negative {
+  color: #EF4444;
+}
+
+.game-start,
+.game-over {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(139, 92, 246, 0.3);
+  z-index: 20;
+  min-width: 300px;
+}
+
+.game-start h3,
+.game-over h3 {
+  margin: 0 0 20px 0;
+  color: #374151;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.game-start p,
+.game-over p {
+  margin: 10px 0;
+  color: #6B7280;
+  line-height: 1.5;
+}
+
+.start-button,
+.restart-button {
+  background: linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+  margin-top: 20px;
+}
+
+.start-button:hover,
+.restart-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+}
+
+.start-button:active,
+.restart-button:active {
+  transform: translateY(0);
+}
+
+.game-instructions {
+  margin-top: 30px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.game-instructions h4 {
+  margin: 0 0 15px 0;
+  color: #374151;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.game-instructions ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #6B7280;
+}
+
+.game-instructions li {
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.game-instructions a {
+  color: #8B5CF6;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.game-instructions a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive Design */
+@media (max-width: 900px) {
+  .game-container {
+    width: 100%;
+    max-width: 600px;
+    height: 450px;
+  }
+  
+  .game-stats {
+    gap: 15px;
+  }
+  
+  .game-stats span {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+  
+  .stremeinu-character {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .token-info {
+    min-width: 70px;
+    padding: 6px;
+  }
+  
+  .token-info img {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .game-start,
+  .game-over {
+    min-width: 250px;
+    padding: 30px;
+  }
+}
+
+@media (max-width: 600px) {
+  .streme-game {
+    padding: 15px;
+  }
+  
+  .game-container {
+    height: 400px;
+  }
+  
+  .game-header h2 {
+    font-size: 24px;
+  }
+  
+  .game-stats {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .stremeinu-character {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .token-info {
+    min-width: 60px;
+    padding: 4px;
+  }
+  
+  .token-info img {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .token-name {
+    font-size: 10px;
+  }
+  
+  .price-change {
+    font-size: 8px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .streme-game {
+    background: rgba(31, 41, 55, 0.95);
+    border-color: rgba(139, 92, 246, 0.3);
+  }
+  
+  .game-header {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%);
+    border-color: rgba(139, 92, 246, 0.4);
+  }
+  
+  .game-header h2 {
+    color: #F9FAFB;
+  }
+  
+  .game-start,
+  .game-over {
+    background: rgba(31, 41, 55, 0.95);
+    border-color: rgba(139, 92, 246, 0.4);
+  }
+  
+  .game-start h3,
+  .game-over h3 {
+    color: #F9FAFB;
+  }
+  
+  .game-start p,
+  .game-over p {
+    color: #D1D5DB;
+  }
+  
+  .game-instructions {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+    border-color: rgba(139, 92, 246, 0.3);
+  }
+  
+  .game-instructions h4 {
+    color: #F9FAFB;
+  }
+  
+  .game-instructions li {
+    color: #D1D5DB;
+  }
+  
+  .token-info {
+    background: rgba(31, 41, 55, 0.95);
+    border-color: rgba(139, 92, 246, 0.4);
+  }
+  
+  .token-name {
+    color: #F9FAFB;
+  }
+} 

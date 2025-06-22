@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { sdk } from '@farcaster/frame-sdk'
-import { testNeynarConnection } from './lib/neynar'
+import { testNeynarConnection, getNeynarStatus } from './lib/neynar'
 import { getEmbedConfigFromURL, updateEmbed } from './lib/embeds'
 import { ShareButton, QuickShareButtons } from './components/ShareButton'
+import { StremeGame } from './components/StremeGame'
 import './App.css'
 
 function App() {
   const [neynarStatus, setNeynarStatus] = useState<string>('Testing...')
+  const [neynarDetails, setNeynarDetails] = useState<any>(null)
   const [currentState, setCurrentState] = useState<string>('default')
   const [userFid, setUserFid] = useState<number | null>(null)
 
@@ -40,13 +42,22 @@ function App() {
 
     initializeApp()
 
-    // Test Neynar connection
+    // Test Neynar connection with enhanced error handling
     const testConnection = async () => {
       try {
-        const isConnected = await testNeynarConnection()
-        setNeynarStatus(isConnected ? '✅ Connected' : '❌ Failed')
+        setNeynarStatus('🔍 Testing connection...')
+        const result = await testNeynarConnection()
+        
+        if (result.success) {
+          setNeynarStatus('✅ Connected')
+          setNeynarDetails(result.details)
+        } else {
+          setNeynarStatus(`❌ ${result.message}`)
+          setNeynarDetails(result.details)
+        }
       } catch (error) {
         setNeynarStatus('❌ Error')
+        setNeynarDetails({ error: error })
         console.error('Neynar connection error:', error)
       }
     }
@@ -56,6 +67,9 @@ function App() {
 
   const renderStateContent = () => {
     switch (currentState) {
+      case 'game':
+        return <StremeGame />
+      
       case 'success':
         return (
           <div className="state-content success">
@@ -103,6 +117,10 @@ function App() {
                 <h3>🎨 Beautiful Design</h3>
                 <p>Stunning purple gradient theme with smooth animations</p>
               </div>
+              <div className="feature-card">
+                <h3>🎮 Stremeinu's Adventure</h3>
+                <p>Fun game featuring trending Streme tokens from Streme.Fun API</p>
+              </div>
             </div>
           </div>
         )
@@ -117,6 +135,37 @@ function App() {
               <p className={`status ${neynarStatus.includes('✅') ? 'success' : 'error'}`}>
                 {neynarStatus}
               </p>
+              
+              {/* Configuration Details */}
+              <div className="config-details">
+                <h4>Configuration:</h4>
+                <div className="config-grid">
+                  <div className="config-item">
+                    <span>API Key:</span>
+                    <span className={neynarDetails?.hasApiKey ? 'success' : 'error'}>
+                      {neynarDetails?.hasApiKey ? '✅ Configured' : '❌ Not set'}
+                    </span>
+                  </div>
+                  <div className="config-item">
+                    <span>Client ID:</span>
+                    <span className={neynarDetails?.hasClientId ? 'success' : 'error'}>
+                      {neynarDetails?.hasClientId ? '✅ Configured' : '❌ Not set'}
+                    </span>
+                  </div>
+                </div>
+                
+                {!neynarDetails?.hasApiKey && (
+                  <div className="setup-instructions">
+                    <h4>🔧 Setup Instructions:</h4>
+                    <ol>
+                      <li>Get your API key from <a href="https://neynar.com/" target="_blank" rel="noopener noreferrer">Neynar</a></li>
+                      <li>Create a <code>.env</code> file in your project root</li>
+                      <li>Add: <code>VITE_NEYNAR_API_KEY=your_api_key_here</code></li>
+                      <li>Restart your development server</li>
+                    </ol>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="neynar-info">
               <p>With Neynar, you can:</p>
@@ -141,6 +190,11 @@ function App() {
             <div className="placeholder">
               <p>✨ Next: Add Farcaster features like authentication, wallet integration, and more!</p>
               <p>🔗 Neynar API: {neynarStatus}</p>
+              {neynarDetails && !neynarDetails.hasApiKey && (
+                <p className="setup-hint">
+                  💡 <strong>Tip:</strong> Add your Neynar API key to enable full functionality
+                </p>
+              )}
             </div>
             {userFid && (
               <div className="user-info">
@@ -167,7 +221,7 @@ function App() {
         <QuickShareButtons />
         <div className="app-info">
           <p>Built with ❤️ using React, TypeScript, and the Farcaster SDK</p>
-          <p>Deployed on Netlify • Powered by Neynar</p>
+          <p>Deployed on Netlify • Powered by Neynar • Game powered by <a href="https://streme.fun" target="_blank" rel="noopener noreferrer">Streme.Fun</a></p>
         </div>
       </footer>
     </div>

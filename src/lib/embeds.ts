@@ -75,6 +75,20 @@ export const EMBED_CONFIGS = {
         url: "https://fcmapp.netlify.app?state=neynar"
       }
     }
+  },
+  
+  // Game embed
+  game: {
+    ...BASE_EMBED,
+    imageUrl: "https://fcmapp.netlify.app/stremeinu.png",
+    button: {
+      ...BASE_EMBED.button,
+      title: "🎮 Play Stremeinu's Adventure!",
+      action: {
+        ...BASE_EMBED.button.action,
+        url: "https://fcmapp.netlify.app?state=game"
+      }
+    }
   }
 };
 

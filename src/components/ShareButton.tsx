@@ -4,7 +4,7 @@ import { EMBED_CONFIGS, createShareableEmbed } from '../lib/embeds';
 import './ShareButton.css';
 
 interface ShareButtonProps {
-  variant?: 'default' | 'success' | 'features' | 'neynar';
+  variant?: 'default' | 'success' | 'features' | 'neynar' | 'game';
   className?: string;
 }
 
@@ -56,6 +56,8 @@ export function ShareButton({ variant = 'default', className = '' }: ShareButton
         return '✨ Share Features';
       case 'neynar':
         return '🔗 Share Neynar';
+      case 'game':
+        return '🎮 Share Game';
       default:
         return '🚀 Share App';
     }
@@ -108,6 +110,7 @@ export function QuickShareButtons() {
         <ShareButton variant="success" />
         <ShareButton variant="features" />
         <ShareButton variant="neynar" />
+        <ShareButton variant="game" />
       </div>
     </div>
   );
