@@ -1,7 +1,67 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="1200" height="630" fill="#000000"/>
-  <rect x="100" y="100" width="1000" height="430" rx="20" fill="#1a1a1a"/>
-  <text x="600" y="250" text-anchor="middle" font-family="Arial, sans-serif" font-size="60" font-weight="bold" fill="#FFFFFF">🚀 Farcaster Mini App</text>
-  <text x="600" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" fill="#CCCCCC">Built with React & TypeScript</text>
-  <text x="600" y="380" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#888888">Ready for Farcaster integration</text>
+  <defs>
+    <!-- Purple gradient background -->
+    <linearGradient id="ogGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f093fb;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Glow effect -->
+    <filter id="ogGlow">
+      <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background with gradient -->
+  <rect width="1200" height="630" fill="url(#ogGradient)"/>
+  
+  <!-- Decorative background elements -->
+  <circle cx="200" cy="150" r="80" fill="#FFFFFF" opacity="0.1"/>
+  <circle cx="1000" cy="480" r="120" fill="#FFFFFF" opacity="0.08"/>
+  <circle cx="300" cy="500" r="60" fill="#FFFFFF" opacity="0.12"/>
+  
+  <!-- Main content area -->
+  <rect x="150" y="100" width="900" height="430" rx="30" fill="#FFFFFF" opacity="0.15"/>
+  
+  <!-- Large inu illustration -->
+  <g transform="translate(300, 315)">
+    <!-- Main face circle -->
+    <circle cx="0" cy="0" r="80" fill="#FFFFFF" opacity="0.9" filter="url(#ogGlow)"/>
+    
+    <!-- Ears -->
+    <ellipse cx="-32" cy="-55" rx="18" ry="25" fill="#FFFFFF" opacity="0.8"/>
+    <ellipse cx="32" cy="-55" rx="18" ry="25" fill="#FFFFFF" opacity="0.8"/>
+    
+    <!-- Eyes -->
+    <circle cx="-25" cy="-15" r="8" fill="#333333"/>
+    <circle cx="25" cy="-15" r="8" fill="#333333"/>
+    <circle cx="-25" cy="-15" r="4" fill="#FFFFFF"/>
+    <circle cx="25" cy="-15" r="4" fill="#FFFFFF"/>
+    
+    <!-- Nose -->
+    <ellipse cx="0" cy="15" rx="6" ry="4" fill="#FF6B9D"/>
+    
+    <!-- Mouth -->
+    <path d="M -18 30 Q 0 40 18 30" stroke="#333333" stroke-width="3" fill="none"/>
+    
+    <!-- Cheeks -->
+    <circle cx="-45" cy="15" r="12" fill="#FFB3D9" opacity="0.7"/>
+    <circle cx="45" cy="15" r="12" fill="#FFB3D9" opacity="0.7"/>
+  </g>
+  
+  <!-- Text content -->
+  <text x="600" y="200" text-anchor="middle" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#FFFFFF">🚀 Farcaster Mini App</text>
+  <text x="600" y="280" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" fill="#FFFFFF" opacity="0.9">Built with React & TypeScript</text>
+  <text x="600" y="330" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#FFFFFF" opacity="0.8">Ready for Farcaster integration</text>
+  
+  <!-- Floating particles -->
+  <circle cx="150" cy="150" r="4" fill="#FFFFFF" opacity="0.6"/>
+  <circle cx="1050" cy="200" r="3" fill="#FFFFFF" opacity="0.5"/>
+  <circle cx="180" cy="480" r="5" fill="#FFFFFF" opacity="0.4"/>
+  <circle cx="1020" cy="450" r="2" fill="#FFFFFF" opacity="0.7"/>
 </svg> 

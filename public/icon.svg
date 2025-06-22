@@ -1,7 +1,53 @@
 <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="200" height="200" rx="40" fill="#000000"/>
-  <circle cx="100" cy="80" r="20" fill="#FFFFFF"/>
-  <rect x="70" y="110" width="60" height="8" rx="4" fill="#FFFFFF"/>
-  <rect x="80" y="125" width="40" height="8" rx="4" fill="#FFFFFF"/>
-  <rect x="85" y="140" width="30" height="8" rx="4" fill="#FFFFFF"/>
+  <defs>
+    <!-- Purple gradient background -->
+    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f093fb;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Glow effect -->
+    <filter id="iconGlow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background with gradient and rounded corners -->
+  <rect width="200" height="200" rx="40" fill="url(#iconGradient)"/>
+  
+  <!-- Inu face in the center -->
+  <g transform="translate(100, 100)">
+    <!-- Main face circle -->
+    <circle cx="0" cy="0" r="45" fill="#FFFFFF" opacity="0.95" filter="url(#iconGlow)"/>
+    
+    <!-- Ears -->
+    <ellipse cx="-18" cy="-30" rx="10" ry="15" fill="#FFFFFF" opacity="0.9"/>
+    <ellipse cx="18" cy="-30" rx="10" ry="15" fill="#FFFFFF" opacity="0.9"/>
+    
+    <!-- Eyes -->
+    <circle cx="-15" cy="-8" r="5" fill="#333333"/>
+    <circle cx="15" cy="-8" r="5" fill="#333333"/>
+    <circle cx="-15" cy="-8" r="2.5" fill="#FFFFFF"/>
+    <circle cx="15" cy="-8" r="2.5" fill="#FFFFFF"/>
+    
+    <!-- Nose -->
+    <ellipse cx="0" cy="8" rx="4" ry="2.5" fill="#FF6B9D"/>
+    
+    <!-- Mouth -->
+    <path d="M -10 18 Q 0 25 10 18" stroke="#333333" stroke-width="2.5" fill="none"/>
+    
+    <!-- Cheeks -->
+    <circle cx="-25" cy="8" r="8" fill="#FFB3D9" opacity="0.7"/>
+    <circle cx="25" cy="8" r="8" fill="#FFB3D9" opacity="0.7"/>
+  </g>
+  
+  <!-- Decorative elements -->
+  <circle cx="40" cy="40" r="3" fill="#FFFFFF" opacity="0.6"/>
+  <circle cx="160" cy="60" r="2" fill="#FFFFFF" opacity="0.5"/>
+  <circle cx="140" cy="160" r="2.5" fill="#FFFFFF" opacity="0.4"/>
 </svg> 
