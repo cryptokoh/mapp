@@ -1,0 +1,7 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#000000"/>
+  <rect x="100" y="100" width="1000" height="430" rx="20" fill="#1a1a1a"/>
+  <text x="600" y="250" text-anchor="middle" font-family="Arial, sans-serif" font-size="60" font-weight="bold" fill="#FFFFFF">🚀 Farcaster Mini App</text>
+  <text x="600" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" fill="#CCCCCC">Built with React & TypeScript</text>
+  <text x="600" y="380" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#888888">Ready for Farcaster integration</text>
+</svg> 

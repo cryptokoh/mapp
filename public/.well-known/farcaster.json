@@ -1,0 +1,26 @@
+{
+  "frame": {
+    "version": "1",
+    "name": "Farcaster Mini App",
+    "iconUrl": "https://fcmapp.netlify.app/icon.svg",
+    "homeUrl": "https://fcmapp.netlify.app",
+    "imageUrl": "https://fcmapp.netlify.app/og-image.svg",
+    "buttonTitle": "🚀 Launch App",
+    "splashImageUrl": "https://fcmapp.netlify.app/splash.svg",
+    "splashBackgroundColor": "#000000",
+    "subtitle": "A Farcaster Mini App built with React and TypeScript",
+    "description": "Demonstrates the basic setup for creating Mini Apps that can run within Farcaster clients.",
+    "primaryCategory": "social",
+    "tags": [
+      "farcaster",
+      "mini-app",
+      "react",
+      "typescript"
+    ],
+    "heroImageUrl": "https://fcmapp.netlify.app/og-image.svg",
+    "tagline": "Farcaster Mini App Starter",
+    "ogTitle": "Farcaster Mini App",
+    "ogDescription": "A Farcaster Mini App built with React and TypeScript",
+    "ogImageUrl": "https://fcmapp.netlify.app/og-image.svg"
+  }
+} 
