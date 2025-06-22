@@ -10,13 +10,13 @@ function App() {
 
   return (
     <div className="app-container">
-      <h1>Farcaster Mini App Starter</h1>
+      <h1>🚀 Farcaster Mini App</h1>
       <p>
-        Your app is running! 🎉<br />
-        Edit <code>src/App.tsx</code> to start building your Farcaster Mini App.
+        Your app is running successfully! 🎉<br />
+        Ready for deployment at: <strong>fcmapp.netlify.app</strong>
       </p>
       <div className="placeholder">
-        {/* Future Farcaster features will go here */}
+        <p>✨ Next: Add Farcaster features like authentication, wallet integration, and more!</p>
       </div>
     </div>
   )
