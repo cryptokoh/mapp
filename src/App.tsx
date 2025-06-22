@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { sdk } from '@farcaster/frame-sdk'
-import { testNeynarConnection, getNeynarStatus } from './lib/neynar'
+import { testNeynarConnection, getNeynarStatus, quickNeynarTest } from './lib/neynar'
 import { getEmbedConfigFromURL, updateEmbed } from './lib/embeds'
 import { ShareButton, QuickShareButtons } from './components/ShareButton'
 import { StremeGame } from './components/StremeGame'
@@ -154,6 +154,13 @@ function App() {
                   </div>
                 </div>
                 
+                {neynarDetails?.testUser && (
+                  <div className="test-result">
+                    <h4>✅ Test Result:</h4>
+                    <p>Successfully fetched user: <strong>{neynarDetails.testUser}</strong></p>
+                  </div>
+                )}
+                
                 {!neynarDetails?.hasApiKey && (
                   <div className="setup-instructions">
                     <h4>🔧 Setup Instructions:</h4>
@@ -166,14 +173,30 @@ function App() {
                   </div>
                 )}
               </div>
+              
+              {/* Debug Section */}
+              <div className="debug-section">
+                <h4>🔧 Debug Tools:</h4>
+                <p>Open browser console and run: <code>testNeynar()</code></p>
+                <button 
+                  onClick={async () => {
+                    console.log('🧪 Manual test triggered...');
+                    const result = await quickNeynarTest();
+                    console.log('🧪 Manual test result:', result);
+                  }}
+                  className="debug-button"
+                >
+                  🧪 Test Now
+                </button>
+              </div>
             </div>
             <div className="neynar-info">
               <p>With Neynar, you can:</p>
               <ul>
-                <li>Fetch user data and casts</li>
-                <li>Interact with the Farcaster protocol</li>
-                <li>Build powerful social features</li>
-                <li>Access real-time updates</li>
+                <li>Fetch user data and profiles</li>
+                <li>Get user followers and following</li>
+                <li>Validate Farcaster frames</li>
+                <li>Access real-time Farcaster data</li>
               </ul>
             </div>
           </div>

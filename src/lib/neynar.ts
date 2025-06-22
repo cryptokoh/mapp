@@ -9,6 +9,42 @@ export const neynarConfig = {
   isConfigured: !!NEYNAR_API_KEY,
 };
 
+// Simple test function that can be called from browser console
+export const quickNeynarTest = async () => {
+  console.log('🧪 Quick Neynar Test Starting...');
+  console.log('🔑 API Key present:', !!NEYNAR_API_KEY);
+  console.log('🆔 Client ID present:', !!NEYNAR_CLIENT_ID);
+  
+  if (!NEYNAR_API_KEY) {
+    console.error('❌ No API key found!');
+    return false;
+  }
+  
+  try {
+    const response = await fetch('https://api.neynar.com/v2/farcaster/user/bulk?fids=3', {
+      headers: {
+        'api_key': NEYNAR_API_KEY,
+        'accept': 'application/json',
+      },
+    });
+    
+    console.log('📡 Response status:', response.status);
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Test successful! User:', data.users?.[0]?.username);
+      return true;
+    } else {
+      const errorText = await response.text();
+      console.error('❌ Test failed:', response.status, errorText);
+      return false;
+    }
+  } catch (error) {
+    console.error('💥 Test error:', error);
+    return false;
+  }
+};
+
 // Enhanced test function with detailed status reporting
 export const testNeynarConnection = async (): Promise<{ success: boolean; message: string; details?: any }> => {
   try {
@@ -29,8 +65,8 @@ export const testNeynarConnection = async (): Promise<{ success: boolean; messag
     console.log('📋 API Key configured:', NEYNAR_API_KEY ? 'Yes' : 'No');
     console.log('📋 Client ID configured:', NEYNAR_CLIENT_ID ? 'Yes' : 'No');
     
-    // Test API call using fetch instead of SDK to avoid browser conflicts
-    const testUrl = 'https://api.neynar.com/v2/farcaster/user/info?fid=3';
+    // Test API call using the correct endpoint (user/bulk is confirmed working)
+    const testUrl = 'https://api.neynar.com/v2/farcaster/user/bulk?fids=3';
     console.log('🌐 Testing endpoint:', testUrl);
     
     const response = await fetch(testUrl, {
@@ -45,13 +81,15 @@ export const testNeynarConnection = async (): Promise<{ success: boolean; messag
     if (response.ok) {
       const data = await response.json();
       console.log('✅ Neynar API test successful');
+      console.log('📊 User data:', data.users?.[0]?.username || 'No user data');
       return {
         success: true,
-        message: 'Successfully connected to Neynar API',
+        message: `Successfully connected to Neynar API. Tested with user: ${data.users?.[0]?.username || 'Unknown'}`,
         details: {
           status: response.status,
           hasApiKey: true,
           hasClientId: !!NEYNAR_CLIENT_ID,
+          testUser: data.users?.[0]?.username,
           testData: data,
         }
       };
@@ -119,22 +157,28 @@ export const neynarApiCall = async (endpoint: string, options: RequestInit = {})
   }
 };
 
-// Helper function to get user info
+// Helper function to get user info (confirmed working endpoint)
 export const getUserInfo = async (fid: number) => {
-  return neynarApiCall(`user/info?fid=${fid}`);
+  return neynarApiCall(`user/bulk?fids=${fid}`);
 };
 
-// Helper function to get user casts
-export const getUserCasts = async (fid: number, limit: number = 10) => {
-  return neynarApiCall(`casts?fid=${fid}&limit=${limit}`);
+// Helper function to get multiple users info
+export const getUsersInfo = async (fids: number[]) => {
+  const fidsParam = fids.join(',');
+  return neynarApiCall(`user/bulk?fids=${fidsParam}`);
 };
 
-// Helper function to get trending casts
-export const getTrendingCasts = async (limit: number = 10) => {
-  return neynarApiCall(`casts/trending?limit=${limit}`);
+// Helper function to get user followers (if available)
+export const getUserFollowers = async (fid: number, limit: number = 10) => {
+  return neynarApiCall(`user/followers?fid=${fid}&limit=${limit}`);
 };
 
-// Helper function to get frame info
+// Helper function to get user following (if available)
+export const getUserFollowing = async (fid: number, limit: number = 10) => {
+  return neynarApiCall(`user/following?fid=${fid}&limit=${limit}`);
+};
+
+// Helper function to get frame info (if available)
 export const getFrameInfo = async (frameUrl: string) => {
   return neynarApiCall(`frame/validate?frame_url=${encodeURIComponent(frameUrl)}`);
 };
