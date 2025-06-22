@@ -271,9 +271,9 @@ function App() {
             <div className="app-info">
               <p>Built with ❤️ using React, TypeScript, and the Farcaster SDK</p>
               <p>Deployed on Netlify • Powered by Neynar • Game powered by <a href="https://streme.fun" target="_blank" rel="noopener noreferrer">Streme.Fun</a></p>
-            </div>
+      </div>
           </footer>
-        </div>
+      </div>
       )}
 
       {/* Settings Panel */}
