@@ -3,11 +3,10 @@ import { sdk } from '@farcaster/frame-sdk';
 import './ShareButton.css';
 
 interface ShareButtonProps {
-  variant?: 'game';
   className?: string;
 }
 
-export function ShareButton({ variant = 'game', className = '' }: ShareButtonProps) {
+export function ShareButton({ className = '' }: ShareButtonProps) {
   const [isSharing, setIsSharing] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
 
@@ -88,7 +87,7 @@ export function QuickShareButtons() {
     <div className="quick-share-buttons">
       <h3>Share Your Game:</h3>
       <div className="share-grid">
-        <ShareButton variant="game" />
+        <ShareButton />
       </div>
     </div>
   );

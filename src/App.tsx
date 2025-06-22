@@ -43,7 +43,7 @@ function App() {
           <header className="app-header">
             <h1>🎮 Stremeinu's Adventure</h1>
             <div className="header-actions">
-              <ShareButton variant="game" />
+              <ShareButton />
               <button 
                 className="settings-button"
                 onClick={() => setShowSettings(true)}
