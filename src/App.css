@@ -97,6 +97,16 @@
   margin: 5px 0;
 }
 
+.app-info a {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.app-info a:hover {
+  text-decoration: underline;
+}
+
 /* State Content Styles */
 .state-content {
   max-width: 800px;
@@ -370,12 +380,16 @@
 @media (max-width: 768px) {
   .app-header {
     flex-direction: column;
-    gap: 16px;
+    gap: 15px;
     text-align: center;
   }
   
   .app-header h1 {
     font-size: 20px;
+  }
+  
+  .app-main {
+    padding: 20px 10px;
   }
   
   .state-content {
@@ -530,27 +544,22 @@
 }
 
 .settings-button {
-  background: linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%);
-  color: white;
+  background: rgba(255, 255, 255, 0.2);
   border: none;
-  padding: 12px;
-  border-radius: 50%;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 18px;
   cursor: pointer;
-  font-size: 1.2rem;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
-  width: 45px;
-  height: 45px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: white;
+  backdrop-filter: blur(10px);
 }
 
 .settings-button:hover {
-  transform: translateY(-2px) rotate(90deg);
-  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
 }
 
 .settings-button:active {
-  transform: translateY(0) rotate(90deg);
+  transform: translateY(0);
 }
