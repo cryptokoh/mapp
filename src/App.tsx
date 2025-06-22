@@ -1,79 +1,73 @@
-import { useEffect, useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { sdk } from '@farcaster/frame-sdk'
-import { ShareButton, QuickShareButtons } from './components/ShareButton'
 import { StremeGame } from './components/StremeGame'
+import { ShareButton } from './components/ShareButton'
 import { SplashScreen } from './components/SplashScreen'
-import { SettingsPanel } from './components/SettingsPanel'
+import TrendingScreen from './components/TrendingScreen'
 import './App.css'
 
 function App() {
   const [showSplash, setShowSplash] = useState(true)
-  const [showSettings, setShowSettings] = useState(false)
+  const [showTrending, setShowTrending] = useState(false)
 
   useEffect(() => {
     // Get user context
     const initializeApp = async () => {
       try {
         const context = await sdk.context
-        const user = context.user
-        // User context available if needed for future features
-        console.log('User context:', user)
+        if (context && context.user) {
+          // User context available if needed for future features
+          console.log('User context:', context.user)
+        }
       } catch (error) {
         console.error('Error initializing app:', error)
+        // Continue without user context - app will still work
       }
     }
 
     initializeApp()
   }, [])
 
-  const handleSplashComplete = () => {
+  useEffect(() => {
+    // Auto-hide splash screen after 3 seconds
+    const timer = setTimeout(() => {
+      setShowSplash(false)
+    }, 3000)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  const handleCloseSplash = () => {
     setShowSplash(false)
   }
 
+  if (showSplash) {
+    return <SplashScreen onComplete={handleCloseSplash} />
+  }
+
   return (
-    <>
-      {/* Splash Screen */}
-      {showSplash && (
-        <SplashScreen onComplete={handleSplashComplete} />
-      )}
-
-      {/* Main App */}
-      {!showSplash && (
-        <div className="app-container">
-          <header className="app-header">
-            <h1>🎮 Stremeinu's Adventure</h1>
-            <div className="header-actions">
-              <ShareButton />
-              <button 
-                className="settings-button"
-                onClick={() => setShowSettings(true)}
-                title="Settings"
-              >
-                ⚙️
-              </button>
-            </div>
-          </header>
-          
-          <main className="app-main">
-            <StremeGame />
-          </main>
-          
-          <footer className="app-footer">
-            <QuickShareButtons />
-            <div className="app-info">
-              <p>Built with ❤️ using React, TypeScript, and the Farcaster SDK</p>
-              <p>Game powered by <a href="https://streme.fun" target="_blank" rel="noopener noreferrer">Streme.Fun</a></p>
-            </div>
-          </footer>
+    <div className="app-container">
+      <header className="app-header">
+        <h1>🎮 Stremeinu's Adventure</h1>
+        <div className="header-actions">
+          <button 
+            className="trending-button"
+            onClick={() => setShowTrending(true)}
+            title="Show Trending"
+          >
+            🔥 Trending
+          </button>
         </div>
-      )}
+      </header>
+      
+      <main className="app-main">
+        <StremeGame />
+      </main>
 
-      {/* Settings Panel */}
-      <SettingsPanel 
-        isOpen={showSettings} 
-        onClose={() => setShowSettings(false)} 
-      />
-    </>
+      {showTrending && (
+        <TrendingScreen onClose={() => setShowTrending(false)} />
+      )}
+    </div>
   )
 }
 

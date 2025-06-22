@@ -1,209 +1,234 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './VirtualJoystick.css';
 
-interface JoystickPosition {
-  x: number;
-  y: number;
-}
-
 interface VirtualJoystickProps {
-  onMove: (direction: 'up' | 'down' | 'left' | 'right' | null, multiplier: number) => void;
+  onDirectionChange: (direction: 'up' | 'down' | 'left' | 'right' | null, multiplier: number) => void;
   disabled?: boolean;
 }
 
-export function VirtualJoystick({ onMove, disabled = false }: VirtualJoystickProps) {
-  const [isActive, setIsActive] = useState(false);
-  const [position, setPosition] = useState<JoystickPosition>({ x: 0, y: 0 });
-  const [holdTime, setHoldTime] = useState(0);
+export const VirtualJoystick: React.FC<VirtualJoystickProps> = ({ 
+  onDirectionChange, 
+  disabled = false 
+}) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [direction, setDirection] = useState<'up' | 'down' | 'left' | 'right' | null>(null);
   const [multiplier, setMultiplier] = useState(1);
+  const [isActive, setIsActive] = useState(false);
   
   const joystickRef = useRef<HTMLDivElement>(null);
-  const thumbRef = useRef<HTMLDivElement>(null);
-  const holdTimerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const stickRef = useRef<HTMLDivElement>(null);
+  const centerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const maxDistanceRef = useRef<number>(0);
 
-  const JOYSTICK_RADIUS = 60;
-  const THUMB_RADIUS = 25;
-  const MAX_DISTANCE = JOYSTICK_RADIUS - THUMB_RADIUS;
-
-  const getJoystickCenter = useCallback(() => {
-    if (!joystickRef.current) return { x: 0, y: 0 };
-    const rect = joystickRef.current.getBoundingClientRect();
-    return {
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2
-    };
-  }, []);
-
-  const calculateDirection = useCallback((x: number, y: number) => {
-    const center = getJoystickCenter();
-    const deltaX = x - center.x;
-    const deltaY = y - center.y;
-    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+  const calculateDirection = useCallback((deltaX: number, deltaY: number): 'up' | 'down' | 'left' | 'right' | null => {
+    const threshold = 20; // Minimum distance to trigger direction
     
-    if (distance < 20) return null; // Dead zone
-    
-    const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
-    
-    // Convert angle to direction
-    if (angle > -45 && angle < 45) return 'right'; // Right
-    if (angle >= 45 && angle < 135) return 'down'; // Down
-    if (angle >= 135 || angle < -135) return 'left'; // Left
-    return 'up'; // Up
-  }, [getJoystickCenter]);
-
-  const updateThumbPosition = useCallback((clientX: number, clientY: number) => {
-    const center = getJoystickCenter();
-    const deltaX = clientX - center.x;
-    const deltaY = clientY - center.y;
-    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    
-    let newX = deltaX;
-    let newY = deltaY;
-    
-    // Limit to max distance
-    if (distance > MAX_DISTANCE) {
-      newX = (deltaX / distance) * MAX_DISTANCE;
-      newY = (deltaY / distance) * MAX_DISTANCE;
+    if (Math.abs(deltaX) < threshold && Math.abs(deltaY) < threshold) {
+      return null;
     }
     
-    setPosition({ x: newX, y: newY });
-  }, [getJoystickCenter]);
-
-  const startHoldTimer = useCallback(() => {
-    setHoldTime(0);
-    setMultiplier(1);
-    
-    holdTimerRef.current = setInterval(() => {
-      setHoldTime(prev => {
-        const newTime = prev + 100;
-        if (newTime >= 3000) {
-          setMultiplier(2);
-        } else if (newTime >= 1500) {
-          setMultiplier(1.5);
-        }
-        return newTime;
-      });
-    }, 100);
-  }, []);
-
-  const stopHoldTimer = useCallback(() => {
-    if (holdTimerRef.current) {
-      clearInterval(holdTimerRef.current);
-      holdTimerRef.current = undefined;
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      return deltaX > 0 ? 'right' : 'left';
+    } else {
+      return deltaY > 0 ? 'down' : 'up';
     }
-    setHoldTime(0);
-    setMultiplier(1);
   }, []);
 
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+  const calculateMultiplier = useCallback((distance: number): number => {
+    const maxDistance = maxDistanceRef.current;
+    const normalizedDistance = Math.min(distance / maxDistance, 1);
+    return 1 + (normalizedDistance * 2); // Multiplier from 1x to 3x
+  }, []);
+
+  const handleStart = useCallback((clientX: number, clientY: number) => {
     if (disabled) return;
     
-    e.preventDefault();
+    const joystick = joystickRef.current;
+    const stick = stickRef.current;
+    if (!joystick || !stick) return;
+
+    const rect = joystick.getBoundingClientRect();
+    centerRef.current = {
+      x: rect.width / 2,
+      y: rect.height / 2
+    };
+    maxDistanceRef.current = Math.min(rect.width, rect.height) / 2 - 25;
+
+    setIsDragging(true);
     setIsActive(true);
-    updateThumbPosition(e.clientX, e.clientY);
-    startHoldTimer();
-  }, [disabled, updateThumbPosition, startHoldTimer]);
-
-  const handlePointerMove = useCallback((e: PointerEvent) => {
-    if (!isActive || disabled) return;
     
-    e.preventDefault();
-    updateThumbPosition(e.clientX, e.clientY);
-  }, [isActive, disabled, updateThumbPosition]);
-
-  const handlePointerUp = useCallback(() => {
-    if (!isActive) return;
+    // Trigger initial direction calculation
+    const deltaX = clientX - rect.left - centerRef.current.x;
+    const deltaY = clientY - rect.top - centerRef.current.y;
+    const newDirection = calculateDirection(deltaX, deltaY);
+    setDirection(newDirection);
     
+    if (newDirection) {
+      onDirectionChange(newDirection, 1);
+    }
+  }, [disabled, calculateDirection, onDirectionChange]);
+
+  const handleMove = useCallback((clientX: number, clientY: number) => {
+    if (!isDragging || disabled) return;
+    
+    const joystick = joystickRef.current;
+    const stick = stickRef.current;
+    if (!joystick || !stick) return;
+
+    const rect = joystick.getBoundingClientRect();
+    const deltaX = clientX - rect.left - centerRef.current.x;
+    const deltaY = clientY - rect.top - centerRef.current.y;
+    
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const maxDistance = maxDistanceRef.current;
+    
+    if (distance > maxDistance) {
+      const angle = Math.atan2(deltaY, deltaX);
+      const limitedDeltaX = Math.cos(angle) * maxDistance;
+      const limitedDeltaY = Math.sin(angle) * maxDistance;
+      
+      stick.style.transform = `translate(${limitedDeltaX}px, ${limitedDeltaY}px)`;
+    } else {
+      stick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+    }
+    
+    const newDirection = calculateDirection(deltaX, deltaY);
+    const newMultiplier = calculateMultiplier(distance);
+    
+    if (newDirection !== direction) {
+      setDirection(newDirection);
+      onDirectionChange(newDirection, newMultiplier);
+    }
+    
+    setMultiplier(newMultiplier);
+  }, [isDragging, disabled, calculateDirection, calculateMultiplier, direction, onDirectionChange]);
+
+  const handleEnd = useCallback(() => {
+    if (disabled) return;
+    
+    setIsDragging(false);
     setIsActive(false);
-    setPosition({ x: 0, y: 0 });
-    stopHoldTimer();
-    onMove(null, 1);
-  }, [isActive, stopHoldTimer, onMove]);
-
-  // Handle direction changes
-  useEffect(() => {
-    if (!isActive) return;
+    setDirection(null);
+    setMultiplier(1);
     
-    const center = getJoystickCenter();
-    const direction = calculateDirection(center.x + position.x, center.y + position.y);
-    onMove(direction, multiplier);
-  }, [isActive, position, multiplier, onMove, getJoystickCenter, calculateDirection]);
+    const stick = stickRef.current;
+    if (stick) {
+      stick.style.transform = 'translate(-50%, -50%)';
+    }
+    
+    onDirectionChange(null, 1);
+  }, [disabled, onDirectionChange]);
 
-  // Add global pointer event listeners
+  // Mouse events
   useEffect(() => {
-    if (isActive) {
-      document.addEventListener('pointermove', handlePointerMove);
-      document.addEventListener('pointerup', handlePointerUp);
-      document.addEventListener('pointercancel', handlePointerUp);
+    const handleMouseDown = (e: MouseEvent) => {
+      e.preventDefault();
+      handleStart(e.clientX, e.clientY);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault();
+      handleMove(e.clientX, e.clientY);
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      e.preventDefault();
+      handleEnd();
+    };
+
+    const joystick = joystickRef.current;
+    if (joystick) {
+      joystick.addEventListener('mousedown', handleMouseDown);
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
     }
 
     return () => {
-      document.removeEventListener('pointermove', handlePointerMove);
-      document.removeEventListener('pointerup', handlePointerUp);
-      document.removeEventListener('pointercancel', handlePointerUp);
+      if (joystick) {
+        joystick.removeEventListener('mousedown', handleMouseDown);
+      }
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isActive, handlePointerMove, handlePointerUp]);
+  }, [handleStart, handleMove, handleEnd]);
 
-  // Cleanup on unmount
+  // Touch events
   useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      handleStart(touch.clientX, touch.clientY);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      handleMove(touch.clientX, touch.clientY);
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      handleEnd();
+    };
+
+    const joystick = joystickRef.current;
+    if (joystick) {
+      joystick.addEventListener('touchstart', handleTouchStart, { passive: false });
+      joystick.addEventListener('touchmove', handleTouchMove, { passive: false });
+      joystick.addEventListener('touchend', handleTouchEnd, { passive: false });
+    }
+
     return () => {
-      if (holdTimerRef.current) {
-        clearInterval(holdTimerRef.current);
+      if (joystick) {
+        joystick.removeEventListener('touchstart', handleTouchStart);
+        joystick.removeEventListener('touchmove', handleTouchMove);
+        joystick.removeEventListener('touchend', handleTouchEnd);
       }
     };
-  }, []);
-
-  const holdProgress = Math.min(holdTime / 3000, 1);
-  const showMultiplier = multiplier > 1;
+  }, [handleStart, handleMove, handleEnd]);
 
   return (
-    <div className="virtual-joystick-container">
+    <div className="game-area-joystick">
       <div 
         ref={joystickRef}
         className={`virtual-joystick ${isActive ? 'active' : ''} ${disabled ? 'disabled' : ''}`}
-        onPointerDown={handlePointerDown}
       >
-        {/* Base circle */}
         <div className="joystick-base">
-          <div className="joystick-center-dot"></div>
-        </div>
-        
-        {/* Thumb */}
-        <div 
-          ref={thumbRef}
-          className="joystick-thumb"
-          style={{
-            transform: `translate(${position.x}px, ${position.y}px)`,
-          }}
-        >
-          <div className="thumb-inner"></div>
-        </div>
-        
-        {/* Hold progress ring */}
-        {isActive && (
+          {/* Farcaster Icon */}
+          <div className="farcaster-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+          </div>
+          
           <div 
-            className="hold-progress-ring"
-            style={{
-              background: `conic-gradient(
-                rgba(139, 92, 246, 0.8) 0deg ${holdProgress * 360}deg,
-                rgba(139, 92, 246, 0.2) ${holdProgress * 360}deg 360deg
-              )`
-            }}
-          />
-        )}
+            ref={stickRef}
+            className={`joystick-stick ${isDragging ? 'dragging' : ''}`}
+          >
+            {/* Direction indicators */}
+            <div className="joystick-direction-indicator">
+              <div className={`direction-arrow up ${direction === 'up' ? 'active' : ''}`}></div>
+              <div className={`direction-arrow down ${direction === 'down' ? 'active' : ''}`}></div>
+              <div className={`direction-arrow left ${direction === 'left' ? 'active' : ''}`}></div>
+              <div className={`direction-arrow right ${direction === 'right' ? 'active' : ''}`}></div>
+            </div>
+          </div>
+          
+          <div className="joystick-center"></div>
+        </div>
         
         {/* Multiplier indicator */}
-        {showMultiplier && (
+        {isActive && multiplier > 1 && (
           <div className="multiplier-indicator">
-            <span className="multiplier-text">×{multiplier}</span>
+            <span className="multiplier-text">{multiplier.toFixed(1)}x</span>
           </div>
         )}
       </div>
       
       {/* Instructions */}
       <div className="joystick-instructions">
-        <p>🎮 Drag to move • Hold 3s for ×2 speed</p>
+        <p>🎮 Drag to move Stremeinu</p>
       </div>
     </div>
   );
-} 
+}; 

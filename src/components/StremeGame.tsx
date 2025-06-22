@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { VirtualJoystick } from './VirtualJoystick';
 import './StremeGame.css';
+import { ShareButton } from './ShareButton';
 
 interface StremeToken {
   id: number;
@@ -82,6 +82,14 @@ export function StremeGame() {
   const [burstEffects, setBurstEffects] = useState<BurstEffect[]>([]);
   const [confetti, setConfetti] = useState<ConfettiPiece[]>([]);
   const [isStaking, setIsStaking] = useState(false);
+  const [matrixStream, setMatrixStream] = useState<Array<{id: string, x: number, y: number, speed: number, opacity: number}>>([]);
+  const [wireframeGrid, setWireframeGrid] = useState<Array<{id: string, x: number, y: number, size: number, opacity: number, pulse: number}>>([]);
+  const [electricityNodes, setElectricityNodes] = useState<Array<{id: string, x: number, y: number, connections: string[], pulse: number}>>([]);
+  const [touchTarget, setTouchTarget] = useState<{ x: number; y: number } | null>(null);
+  const [isTouchHeld, setIsTouchHeld] = useState(false);
+  const [rippleCount, setRippleCount] = useState(0);
+  const [isMoving, setIsMoving] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
   
   const gameRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | undefined>(undefined);
@@ -89,6 +97,13 @@ export function StremeGame() {
   const lastTokenFetch = useRef<number>(0);
   const lastParticleTime = useRef<number>(0);
   const burstCounter = useRef<number>(0);
+  const matrixCounter = useRef<number>(0);
+  const wireframeCounter = useRef<number>(0);
+  const electricityCounter = useRef<number>(0);
+  const lastCountdownTime = useRef<number>(0);
+  const obstacleCounter = useRef<number>(0);
+  const baseSpeed = 3;
+  const obstacleSpawnInterval = 2000; // Spawn obstacles every 2 seconds
 
   // Fetch trending tokens from Streme.Fun API
   const fetchTrendingTokens = useCallback(async () => {
@@ -226,11 +241,196 @@ export function StremeGame() {
     }, 3000);
   }, [gameState.collectedTokens, startGame]);
 
-  // Handle joystick input
-  const handleJoystickMove = useCallback((direction: 'up' | 'down' | 'left' | 'right' | null, multiplier: number) => {
-    setJoystickDirection(direction);
-    setJoystickMultiplier(multiplier);
+  // Handle touch-based movement
+  const handleTouchMove = useCallback((clientX: number, clientY: number) => {
+    if (!gameRef.current || !gameState.isPlaying || gameState.isPaused) return;
+    
+    const rect = gameRef.current.getBoundingClientRect();
+    const touchX = clientX - rect.left;
+    const touchY = clientY - rect.top;
+    
+    // Calculate direction and distance from current position
+    const deltaX = touchX - stremeinu.x;
+    const deltaY = touchY - stremeinu.y;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    
+    if (distance > 10) { // Minimum movement threshold
+      setTouchTarget({ x: touchX, y: touchY });
+      setIsMoving(true);
+      
+      // Determine primary direction
+      let direction: 'up' | 'down' | 'left' | 'right' | null = null;
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        direction = deltaX > 0 ? 'right' : 'left';
+      } else {
+        direction = deltaY > 0 ? 'down' : 'up';
+      }
+      
+      setJoystickDirection(direction);
+      setJoystickMultiplier(1 + Math.min(distance / 100, 2)); // Speed based on distance
+    }
+  }, [stremeinu.x, stremeinu.y, gameState.isPlaying, gameState.isPaused]);
+
+  const handleTouchEnd = useCallback(() => {
+    setTouchTarget(null);
+    setIsMoving(false);
+    setJoystickDirection(null);
+    setJoystickMultiplier(1);
   }, []);
+
+  // Add touch event listeners
+  useEffect(() => {
+    const gameContainer = gameRef.current;
+    if (!gameContainer) return;
+
+    const handleTouchStart = (e: TouchEvent | MouseEvent) => {
+      e.preventDefault();
+      const rect = gameContainer.getBoundingClientRect();
+      if (!rect) return;
+
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+
+      setTouchTarget({ x, y });
+      setIsTouchHeld(true);
+      setRippleCount(prev => prev + 1);
+      setIsMoving(true);
+    };
+
+    const handleTouchMove = (e: TouchEvent | MouseEvent) => {
+      e.preventDefault();
+      if (!isTouchHeld) return;
+
+      const rect = gameContainer.getBoundingClientRect();
+      if (!rect) return;
+
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+
+      setTouchTarget({ x, y });
+    };
+
+    const handleTouchEnd = () => {
+      setIsTouchHeld(false);
+      setIsMoving(false);
+      setTimeout(() => {
+        setTouchTarget(null);
+        setRippleCount(0);
+      }, 1200); // Keep showing effects for a bit after release
+    };
+
+    // Mouse events
+    gameContainer.addEventListener('mousedown', handleTouchStart);
+    document.addEventListener('mousemove', handleTouchMove);
+    document.addEventListener('mouseup', handleTouchEnd);
+
+    // Touch events
+    gameContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+    gameContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+    gameContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+    return () => {
+      gameContainer.removeEventListener('mousedown', handleTouchStart);
+      document.removeEventListener('mousemove', handleTouchMove);
+      document.removeEventListener('mouseup', handleTouchEnd);
+      gameContainer.removeEventListener('touchstart', handleTouchStart);
+      gameContainer.removeEventListener('touchmove', handleTouchMove);
+      gameContainer.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isTouchHeld]);
+
+  // Handle continuous ripple generation when touch is held
+  useEffect(() => {
+    let rippleInterval: NodeJS.Timeout | null = null;
+    
+    if (isTouchHeld) {
+      rippleInterval = setInterval(() => {
+        setRippleCount(prev => prev + 1);
+      }, 300);
+    }
+
+    return () => {
+      if (rippleInterval) {
+        clearInterval(rippleInterval);
+      }
+    };
+  }, [isTouchHeld]);
+
+  // Create wireframe grid effect
+  const createWireframeGrid = useCallback(() => {
+    const newGrid = {
+      id: `wireframe-${wireframeCounter.current++}`,
+      x: Math.random() * 800,
+      y: Math.random() * 600,
+      size: 20 + Math.random() * 40,
+      opacity: 0.1 + Math.random() * 0.3,
+      pulse: Math.random() * 2 * Math.PI
+    };
+    
+    setWireframeGrid(prev => [...prev, newGrid]);
+    
+    // Remove grid after some time
+    setTimeout(() => {
+      setWireframeGrid(prev => prev.filter(grid => grid.id !== newGrid.id));
+    }, 8000);
+  }, []);
+
+  // Create electricity nodes
+  const createElectricityNodes = useCallback(() => {
+    const nodeCount = 3 + Math.floor(Math.random() * 3);
+    const nodes: Array<{id: string, x: number, y: number, connections: string[], pulse: number}> = [];
+    
+    for (let i = 0; i < nodeCount; i++) {
+      const node = {
+        id: `electricity-${electricityCounter.current++}`,
+        x: Math.random() * 800,
+        y: Math.random() * 600,
+        connections: [] as string[],
+        pulse: Math.random() * 2 * Math.PI
+      };
+      nodes.push(node);
+    }
+    
+    // Create connections between nodes
+    nodes.forEach((node, index) => {
+      if (index < nodes.length - 1) {
+        node.connections.push(nodes[index + 1].id);
+      }
+    });
+    
+    setElectricityNodes(prev => [...prev, ...nodes]);
+    
+    // Remove nodes after animation
+    setTimeout(() => {
+      setElectricityNodes(prev => prev.filter(node => !nodes.find(n => n.id === node.id)));
+    }, 4000);
+  }, []);
+
+  // Generate wireframe and electricity effects periodically
+  useEffect(() => {
+    const wireframeInterval = setInterval(() => {
+      if (gameState.isPlaying) {
+        createWireframeGrid();
+      }
+    }, 1000);
+
+    const electricityInterval = setInterval(() => {
+      if (gameState.isPlaying) {
+        createElectricityNodes();
+      }
+    }, 2000);
+
+    return () => {
+      clearInterval(wireframeInterval);
+      clearInterval(electricityInterval);
+    };
+  }, [gameState.isPlaying, createWireframeGrid, createElectricityNodes]);
 
   // Handle keyboard input
   useEffect(() => {
@@ -286,11 +486,46 @@ export function StremeGame() {
     return () => clearInterval(moveInterval);
   }, [gameState.isPlaying, gameState.isPaused, joystickDirection, joystickMultiplier]);
 
+  // Handle Stremeinu movement towards touch target
+  useEffect(() => {
+    if (!gameState.isPlaying || gameState.isPaused || !touchTarget || !isMoving) return;
+
+    const moveInterval = setInterval(() => {
+      setStremeinu(prev => {
+        const dx = touchTarget.x - prev.x;
+        const dy = touchTarget.y - prev.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < 10) {
+          // Close enough to target, stop moving
+          return prev;
+        }
+        
+        const moveSpeed = 8;
+        const moveX = (dx / distance) * moveSpeed;
+        const moveY = (dy / distance) * moveSpeed;
+        
+        return {
+          x: Math.max(25, Math.min(775, prev.x + moveX)),
+          y: Math.max(25, Math.min(575, prev.y + moveY))
+        };
+      });
+    }, 16); // ~60 FPS
+
+    return () => clearInterval(moveInterval);
+  }, [gameState.isPlaying, gameState.isPaused, touchTarget, isMoving]);
+
   // Game loop
   useEffect(() => {
     if (!gameState.isPlaying || gameState.isPaused) return;
 
     const gameLoop = (timestamp: number) => {
+      // Don't spawn obstacles if no tokens are loaded yet
+      if (trendingTokens.length === 0) {
+        animationRef.current = requestAnimationFrame(gameLoop);
+        return;
+      }
+
       // Update river flow
       setRiverFlow(prev => (prev + 1) % 360);
       
@@ -308,25 +543,34 @@ export function StremeGame() {
         lastParticleTime.current = timestamp;
       }
       
-      // Spawn obstacles
-      if (timestamp - lastObstacleTime.current > 2000 - gameState.level * 100) {
+      // Spawn new obstacles
+      if (timestamp - lastObstacleTime.current > obstacleSpawnInterval) {
+        // Ensure we have tokens to spawn
         if (trendingTokens.length > 0) {
-          const randomToken = trendingTokens[Math.floor(Math.random() * trendingTokens.length)];
+          // Calculate spawn area based on game container width
+          const gameWidth = gameRef.current?.clientWidth || 800;
+          const spawnAreaWidth = Math.min(200, gameWidth * 0.25); // 25% of game width, max 200px
+          const spawnAreaStart = (gameWidth - spawnAreaWidth) / 2; // Center the spawn area
+          const spawnAreaEnd = spawnAreaStart + spawnAreaWidth;
+          
+          // Ensure spawn area is within bounds
+          const minX = Math.max(50, spawnAreaStart);
+          const maxX = Math.min(gameWidth - 110, spawnAreaEnd);
+          
           const newObstacle: GameObject = {
-            id: `obstacle-${timestamp}`,
-            x: Math.random() * 600 + 100,
-            y: 650,
+            id: `obstacle-${obstacleCounter.current++}`,
+            x: minX + Math.random() * (maxX - minX), // Spawn within the narrow area
+            y: 600, // Start from bottom
             width: 60,
             height: 60,
-            speed: 3 + gameState.level * 0.5,
-            token: randomToken,
+            speed: baseSpeed + (gameState.level * 0.5),
+            token: trendingTokens[Math.floor(Math.random() * trendingTokens.length)],
             rotation: Math.random() * 360,
             scale: 0.8 + Math.random() * 0.4,
-            isCollected: false,
           };
           setObstacles(prev => [...prev, newObstacle]);
-          lastObstacleTime.current = timestamp;
         }
+        lastObstacleTime.current = timestamp;
       }
 
       // Update obstacles
@@ -385,14 +629,39 @@ export function StremeGame() {
         score: prev.score + 1,
       }));
 
-      // Check game over
-      if (gameState.lives <= 0 || gameState.missedTokens >= 6) {
+      // Check game over with countdown
+      if (gameState.lives <= 0) {
         setGameState(prev => ({
           ...prev,
           isPlaying: false,
           gameOver: true,
         }));
         return;
+      }
+
+      // Handle missed tokens countdown
+      if (gameState.missedTokens >= 6) {
+        if (countdown === null) {
+          setCountdown(3);
+        } else if (countdown > 0) {
+          // Continue countdown
+          if (timestamp - lastCountdownTime.current > 1000) {
+            setCountdown(prev => prev! - 1);
+            lastCountdownTime.current = timestamp;
+          }
+        } else {
+          // Countdown finished - game over
+          setGameState(prev => ({
+            ...prev,
+            isPlaying: false,
+            gameOver: true,
+          }));
+          setCountdown(null);
+          return;
+        }
+      } else {
+        // Reset countdown if missed tokens go below 6
+        setCountdown(null);
       }
 
       // Level up every 1000 points
@@ -414,6 +683,11 @@ export function StremeGame() {
       }
     };
   }, [gameState.isPlaying, gameState.isPaused, gameState.lives, gameState.score, gameState.level, stremeinu, trendingTokens, collectToken]);
+
+  // Initial token fetch
+  useEffect(() => {
+    fetchTrendingTokens();
+  }, [fetchTrendingTokens]);
 
   // Fetch tokens periodically
   useEffect(() => {
@@ -437,6 +711,9 @@ export function StremeGame() {
           <span>Lives: {'❤️'.repeat(Math.max(0, gameState.lives))}</span>
           <span>Level: {gameState.level}</span>
           <span>Missed: {gameState.missedTokens}/6</span>
+          {countdown !== null && (
+            <span className="countdown-warning">⚠️ {countdown}s</span>
+          )}
         </div>
       </div>
 
@@ -461,10 +738,9 @@ export function StremeGame() {
 
         {!gameState.isLoading && !gameState.isPlaying && !gameState.gameOver && (
           <div className="game-start">
-            <h3>🚀 Ready to Float?</h3>
+            <h3>Ready to StremeWiFINU?</h3>
             <p>Help Stremeinu navigate the river of trending tokens!</p>
-            <p>Use <strong>Arrow Keys</strong> or <strong>W/S</strong> to move</p>
-            <p><strong>Space</strong> to pause, <strong>R</strong> to restart</p>
+            <p>👆 Touch in the direction to move our Inu friend</p>
             <button onClick={startGame} className="start-button">
               🎮 Start Adventure
             </button>
@@ -517,6 +793,11 @@ export function StremeGame() {
                 🎰 Stake Streme Tokens to Stream Rewards to Wallet
               </button>
             )}
+            
+            {/* Share Button */}
+            <div className="game-over-share">
+              <ShareButton />
+            </div>
           </div>
         )}
 
@@ -545,6 +826,92 @@ export function StremeGame() {
               />
             </div>
             
+            {/* Spawn Area Indicator */}
+            <div className="spawn-area-indicator">
+              <div className="spawn-area-line spawn-area-left"></div>
+              <div className="spawn-area-line spawn-area-right"></div>
+            </div>
+            
+            {/* Wireframe Grid Effects */}
+            {wireframeGrid.map(grid => (
+              <div
+                key={grid.id}
+                className="wireframe-grid"
+                style={{
+                  left: `${grid.x}px`,
+                  top: `${grid.y}px`,
+                  width: `${grid.size}px`,
+                  height: `${grid.size}px`,
+                  opacity: grid.opacity,
+                  '--pulse': grid.pulse,
+                } as React.CSSProperties}
+              />
+            ))}
+            
+            {/* Electricity Nodes and Connections */}
+            {electricityNodes.map(node => (
+              <div
+                key={node.id}
+                className="electricity-node"
+                style={{
+                  left: `${node.x}px`,
+                  top: `${node.y}px`,
+                  '--pulse': node.pulse,
+                } as React.CSSProperties}
+              >
+                {node.connections.map(connectionId => {
+                  const connectedNode = electricityNodes.find(n => n.id === connectionId);
+                  if (!connectedNode) return null;
+                  
+                  const deltaX = connectedNode.x - node.x;
+                  const deltaY = connectedNode.y - node.y;
+                  const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                  const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+                  
+                  return (
+                    <div
+                      key={connectionId}
+                      className="electricity-connection"
+                      style={{
+                        width: `${distance}px`,
+                        transform: `rotate(${angle}deg)`,
+                        '--pulse': node.pulse,
+                      } as React.CSSProperties}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+            
+            {/* Touch Movement Indicator */}
+            {touchTarget && gameState.isPlaying && (
+              <div
+                className="touch-indicator"
+                style={{
+                  left: `${touchTarget.x}px`,
+                  top: `${touchTarget.y}px`,
+                }}
+              >
+                {/* Multiple ripple instances for held effect */}
+                {Array.from({ length: Math.min(rippleCount, 5) }, (_, index) => (
+                  <div key={index} className={`touch-ripple ripple-${(index % 3) + 1}`} 
+                       style={{ animationDelay: `${index * 0.1}s` }}></div>
+                ))}
+                <div className="water-droplet"></div>
+                <div className="touch-glow"></div>
+                <div className="touch-center"></div>
+                
+                {/* Additional held effects */}
+                {isTouchHeld && (
+                  <>
+                    <div className="held-ripple held-1"></div>
+                    <div className="held-ripple held-2"></div>
+                    <div className="held-pulse"></div>
+                  </>
+                )}
+              </div>
+            )}
+
             {/* Floating Particles */}
             {particles.map(particle => (
               <div
@@ -556,6 +923,11 @@ export function StremeGame() {
                 }}
               />
             ))}
+            
+            {/* Touch to Move Instruction */}
+            <div className="touch-instruction">
+              <p>👆 Touch to move</p>
+            </div>
             
             {/* Stremeinu character */}
             <div
@@ -654,25 +1026,7 @@ export function StremeGame() {
             ))}
           </>
         )}
-        
-        {/* Virtual Joystick inside game area */}
-        {gameState.isPlaying && (
-          <div className="game-area-joystick">
-            <VirtualJoystick 
-              onMove={handleJoystickMove}
-              disabled={gameState.isPaused}
-            />
-          </div>
-        )}
       </div>
-
-      {/* Virtual Joystick for Mobile */}
-      {gameState.isPlaying && (
-        <VirtualJoystick 
-          onMove={handleJoystickMove}
-          disabled={gameState.isPaused}
-        />
-      )}
     </div>
   );
 } 
