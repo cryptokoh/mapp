@@ -84,93 +84,12 @@
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   animation: fadeInUp 0.8s ease-out 0.4s both;
-  max-width: 600px;
-  width: 100%;
 }
 
 .placeholder p {
-  margin: 0 0 1rem 0;
+  margin: 0;
   font-size: 1rem;
   opacity: 0.8;
-}
-
-.web-mode-notice {
-  background: rgba(255, 193, 7, 0.2);
-  border-radius: 15px;
-  padding: 1.5rem;
-  margin: 1.5rem 0;
-  border: 1px solid rgba(255, 193, 7, 0.4);
-  animation: fadeInUp 0.8s ease-out 0.6s both;
-}
-
-.web-mode-notice p {
-  margin: 0.5rem 0;
-  font-size: 1rem;
-  font-weight: 500;
-  color: #FFD700;
-}
-
-.user-info {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 15px;
-  padding: 1.5rem;
-  margin: 1.5rem 0;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  animation: fadeInUp 0.8s ease-out 0.6s both;
-}
-
-.user-info p {
-  margin: 0.5rem 0;
-  font-size: 1.1rem;
-  font-weight: 500;
-}
-
-.auth-buttons {
-  margin-top: 1.5rem;
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-}
-
-.auth-button {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 12px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.auth-button.sign-in {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-}
-
-.auth-button.sign-in:hover:not(.disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-}
-
-.auth-button.sign-in.disabled {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.5);
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.auth-button.sign-out {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.auth-button.sign-out:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
 }
 
 /* Floating animation for decorative elements */
@@ -206,23 +125,5 @@
   
   .placeholder {
     padding: 1.5rem;
-  }
-  
-  .user-info {
-    padding: 1rem;
-  }
-  
-  .web-mode-notice {
-    padding: 1rem;
-  }
-  
-  .auth-buttons {
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .auth-button {
-    width: 100%;
-    max-width: 250px;
   }
 }
