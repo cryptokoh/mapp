@@ -7,23 +7,14 @@
       <stop offset="100%" style="stop-color:#f093fb;stop-opacity:1" />
     </linearGradient>
     
-    <!-- Glow effect for the inu -->
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-      <feMerge> 
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-    
-    <!-- Rotation animation for 3 seconds -->
+    <!-- Clockwise rotation animation -->
     <animateTransform
-      xlink:href="#inuImage"
+      xlink:href="#spinningInu"
       attributeName="transform"
       type="rotate"
       from="0 100 100"
       to="360 100 100"
-      dur="3s"
+      dur="2s"
       repeatCount="indefinite"
     />
   </defs>
@@ -31,30 +22,15 @@
   <!-- Background with gradient -->
   <rect width="200" height="200" fill="url(#purpleGradient)"/>
   
-  <!-- Rotating inu image -->
-  <g id="inuImage" transform="translate(100, 100)">
+  <!-- Spinning stremeinu image -->
+  <g id="spinningInu" transform="translate(100, 100)">
     <image 
       href="/stremeinu.png" 
-      x="-40" 
-      y="-40" 
-      width="80" 
-      height="80" 
-      filter="url(#glow)"
+      x="-50" 
+      y="-50" 
+      width="100" 
+      height="100" 
       opacity="0.9"
     />
   </g>
-  
-  <!-- Floating particles for extra visual appeal -->
-  <circle cx="50" cy="50" r="2" fill="#FFFFFF" opacity="0.7">
-    <animate attributeName="opacity" values="0.7;0.2;0.7" dur="2s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="150" cy="80" r="1.5" fill="#FFFFFF" opacity="0.5">
-    <animate attributeName="opacity" values="0.5;0.1;0.5" dur="1.5s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="120" cy="150" r="2.5" fill="#FFFFFF" opacity="0.6">
-    <animate attributeName="opacity" values="0.6;0.1;0.6" dur="2.5s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="80" cy="120" r="1" fill="#FFFFFF" opacity="0.4">
-    <animate attributeName="opacity" values="0.4;0.05;0.4" dur="1.8s" repeatCount="indefinite"/>
-  </circle>
 </svg> 
