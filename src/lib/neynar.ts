@@ -1,6 +1,6 @@
 // Neynar API configuration for browser environment
-const NEYNAR_API_KEY = '775866C1-12A0-41B4-8F84-83235558A52F';
-const NEYNAR_CLIENT_ID = '20df84d2-f2cf-452f-810d-8676d5a48716';
+const NEYNAR_API_KEY = import.meta.env.VITE_NEYNAR_API_KEY || '';
+const NEYNAR_CLIENT_ID = import.meta.env.VITE_NEYNAR_CLIENT_ID || '';
 
 // Export configuration for use in other parts of the app
 export const neynarConfig = {
@@ -11,6 +11,12 @@ export const neynarConfig = {
 // Basic helper function to test the connection
 export const testNeynarConnection = async () => {
   try {
+    // Check if API key is configured
+    if (!NEYNAR_API_KEY) {
+      console.log('Neynar API key not configured');
+      return false;
+    }
+
     // Simple test to verify the configuration is working
     console.log('Neynar config loaded with API key:', NEYNAR_API_KEY.substring(0, 8) + '...');
     console.log('Neynar client ID:', NEYNAR_CLIENT_ID);
@@ -38,6 +44,10 @@ export const testNeynarConnection = async () => {
 
 // Helper function to make Neynar API calls
 export const neynarApiCall = async (endpoint: string, options: RequestInit = {}) => {
+  if (!NEYNAR_API_KEY) {
+    throw new Error('Neynar API key not configured');
+  }
+
   try {
     const response = await fetch(`https://api.neynar.com/v2/farcaster/${endpoint}`, {
       ...options,
