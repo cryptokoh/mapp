@@ -9,10 +9,24 @@ function App() {
   const [user, setUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [authStatus, setAuthStatus] = useState<string>('Not signed in')
+  const [isMiniApp, setIsMiniApp] = useState<boolean>(false)
 
   useEffect(() => {
-    // Hide the splash screen as soon as the UI is ready
-    sdk.actions.ready()
+    // Check if we're in a Mini App environment
+    const checkEnvironment = async () => {
+      try {
+        const miniAppCheck = await sdk.isInMiniApp()
+        setIsMiniApp(miniAppCheck)
+        
+        if (miniAppCheck) {
+          // Hide the splash screen only in Mini App environment
+          sdk.actions.ready()
+        }
+      } catch (error) {
+        console.log('Not in Mini App environment, running as web app')
+        setIsMiniApp(false)
+      }
+    }
     
     // Test Neynar API connection
     const testNeynar = async () => {
@@ -25,8 +39,14 @@ function App() {
       }
     }
     
-    // Initialize authentication
+    // Initialize authentication only in Mini App environment
     const initAuth = async () => {
+      if (!isMiniApp) {
+        setAuthStatus('🌐 Web Mode - Sign in available in Farcaster Mini App')
+        setIsLoading(false)
+        return
+      }
+
       try {
         // Get Quick Auth token (this handles the entire auth flow)
         const { token } = await sdk.quickAuth.getToken()
@@ -52,11 +72,21 @@ function App() {
       }
     }
     
+    checkEnvironment()
     testNeynar()
-    initAuth()
-  }, [])
+    
+    // Wait a bit for environment check to complete
+    setTimeout(() => {
+      initAuth()
+    }, 100)
+  }, [isMiniApp])
 
   const handleSignIn = async () => {
+    if (!isMiniApp) {
+      setAuthStatus('🌐 Please open this app in Farcaster to sign in')
+      return
+    }
+
     try {
       setAuthStatus('Signing in...')
       const { token } = await sdk.quickAuth.getToken()
@@ -82,7 +112,7 @@ function App() {
 
   const handleSignOut = () => {
     setUser(null)
-    setAuthStatus('Not signed in')
+    setAuthStatus(isMiniApp ? 'Not signed in' : '🌐 Web Mode - Sign in available in Farcaster Mini App')
   }
 
   return (
@@ -96,6 +126,13 @@ function App() {
         <p>✨ Next: Add Farcaster features like authentication, wallet integration, and more!</p>
         <p>🔗 Neynar API: {neynarStatus}</p>
         <p>🔐 Authentication: {authStatus}</p>
+        
+        {!isMiniApp && (
+          <div className="web-mode-notice">
+            <p>🌐 You're viewing this in web mode</p>
+            <p>📱 Open in Farcaster to experience the full Mini App features!</p>
+          </div>
+        )}
         
         {user && (
           <div className="user-info">
@@ -112,8 +149,12 @@ function App() {
                 Sign Out
               </button>
             ) : (
-              <button onClick={handleSignIn} className="auth-button sign-in">
-                Sign In with Farcaster
+              <button 
+                onClick={handleSignIn} 
+                className={`auth-button sign-in ${!isMiniApp ? 'disabled' : ''}`}
+                disabled={!isMiniApp}
+              >
+                {isMiniApp ? 'Sign In with Farcaster' : '🌐 Web Mode'}
               </button>
             )}
           </div>
