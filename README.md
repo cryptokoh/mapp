@@ -1,54 +1,59 @@
-# React + TypeScript + Vite
+# Farcaster Mini App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A Farcaster Mini App built with React, TypeScript, and Vite. This app demonstrates the basic setup for creating Mini Apps that can run within Farcaster clients.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- ✅ Farcaster SDK integration
+- ✅ React + TypeScript setup
+- ✅ Vite for fast development
+- ✅ Ready for Farcaster Mini App deployment
 
-## Expanding the ESLint configuration
+## Development
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+```bash
+# Install dependencies
+npm install
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Deployment
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+This app is deployed on Netlify at: https://fcmapp.netlify.app
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+### Netlify Setup
+
+1. Connect your GitHub repository to Netlify
+2. Set build command: `npm run build`
+3. Set publish directory: `dist`
+4. Deploy!
+
+## Farcaster Mini App Features
+
+- **SDK Integration**: Uses `@farcaster/frame-sdk` for Mini App functionality
+- **Splash Screen**: Automatically hides splash screen when UI is ready
+- **Ready for Expansion**: Structured to easily add more Farcaster features
+
+## Next Steps
+
+After verifying the app is running, you can add:
+
+- User authentication with Sign in with Farcaster
+- Wallet integration for Ethereum/Solana
+- Cast composition and sharing
+- Notifications
+- And more!
+
+## Resources
+
+- [Farcaster Mini Apps Documentation](https://docs.farcaster.xyz/mini-apps)
+- [Farcaster SDK](https://github.com/farcasterxyz/miniapps)
+- [Netlify Documentation](https://docs.netlify.com/)
