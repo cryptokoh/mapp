@@ -73,7 +73,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
 
             {/* Title */}
             <div className="splash-title">
-              <h1>Stremeinu's Adventure</h1>
+              <h1>StremINU's SuperFluid River</h1>
               <p>Navigate the river of trending tokens</p>
             </div>
 

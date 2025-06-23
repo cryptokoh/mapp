@@ -643,7 +643,7 @@ export function StremeGame() {
   return (
     <div className="streme-game">
       <div className="game-header">
-        <h2>🌊 Stremeinu's River Adventure</h2>
+        <h2>🌊 StremINU's SuperFluid River</h2>
         <div className="game-stats">
           <span>Score: {gameState.score}</span>
           <span>Lives: {'❤️'.repeat(Math.max(0, gameState.lives))}</span>
@@ -663,7 +663,7 @@ export function StremeGame() {
               <div className="loading-logo">
                 <img src="/stremeinu.png" alt="Stremeinu" />
               </div>
-              <h3>🌊 Loading Stremeinu's River Adventure</h3>
+              <h3>🌊 Loading StremINU's SuperFluid River</h3>
               <div className="loading-spinner">
                 <div className="spinner-ring"></div>
                 <div className="spinner-ring"></div>
@@ -677,7 +677,7 @@ export function StremeGame() {
         {!gameState.isLoading && !gameState.isPlaying && !gameState.gameOver && (
           <div className="game-start">
             <h3>Ready to StremeWiFINU?</h3>
-            <p>Help Stremeinu navigate the river of trending tokens!</p>
+            <p>Help StremINU navigate the river of trending tokens!</p>
             <p>👆 Touch in the direction to move our Inu friend</p>
             <button onClick={startGame} className="start-button">
               🎮 Start Adventure

@@ -47,7 +47,7 @@ function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>🎮 Stremeinu's Adventure</h1>
+        <h1>🎮 StremINU's SuperFluid River</h1>
         <div className="header-actions">
           <button 
             className="trending-button"

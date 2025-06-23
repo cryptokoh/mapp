@@ -54,7 +54,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
                 <h4>🎯 How to Play</h4>
                 <ul>
                   <li><strong>Objective:</strong> Collect as many tokens as possible while avoiding obstacles</li>
-                  <li><strong>Controls:</strong> Use the virtual joystick or arrow keys to move Stremeinu</li>
+                  <li><strong>Controls:</strong> Use the virtual joystick or arrow keys to move StremINU</li>
                   <li><strong>Scoring:</strong> Each token collected adds to your score</li>
                   <li><strong>Game Over:</strong> Game ends after missing 6 tokens</li>
                   <li><strong>Staking:</strong> Click "Stake Streme Tokens" to earn rewards</li>
@@ -133,7 +133,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
                   <div className="trending-item">
                     <div className="trending-rank">#1</div>
                     <div className="trending-info">
-                      <div className="trending-name">Stremeinu's Adventure</div>
+                      <div className="trending-name">StremINU's SuperFluid River</div>
                       <div className="trending-stats">15.4K players • 4.8★</div>
                     </div>
                   </div>
