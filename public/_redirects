@@ -1,0 +1,5 @@
+# Serve .well-known paths first
+/.well-known/*  /.well-known/:splat  200
+
+# Let React Router handle all other routes (SPA fallback)
+/*    /index.html   200 
