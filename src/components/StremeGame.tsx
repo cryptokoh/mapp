@@ -77,12 +77,9 @@ export function StremeGame() {
   const [trendingTokens, setTrendingTokens] = useState<StremeToken[]>([]);
   const [riverFlow, setRiverFlow] = useState(0);
   const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, speed: number}>>([]);
-  const [joystickDirection, setJoystickDirection] = useState<'up' | 'down' | 'left' | 'right' | null>(null);
-  const [joystickMultiplier, setJoystickMultiplier] = useState(1);
   const [burstEffects, setBurstEffects] = useState<BurstEffect[]>([]);
   const [confetti, setConfetti] = useState<ConfettiPiece[]>([]);
   const [isStaking, setIsStaking] = useState(false);
-  const [matrixStream, setMatrixStream] = useState<Array<{id: string, x: number, y: number, speed: number, opacity: number}>>([]);
   const [wireframeGrid, setWireframeGrid] = useState<Array<{id: string, x: number, y: number, size: number, opacity: number, pulse: number}>>([]);
   const [electricityNodes, setElectricityNodes] = useState<Array<{id: string, x: number, y: number, connections: string[], pulse: number}>>([]);
   const [touchTarget, setTouchTarget] = useState<{ x: number; y: number } | null>(null);
@@ -97,7 +94,6 @@ export function StremeGame() {
   const lastTokenFetch = useRef<number>(0);
   const lastParticleTime = useRef<number>(0);
   const burstCounter = useRef<number>(0);
-  const matrixCounter = useRef<number>(0);
   const wireframeCounter = useRef<number>(0);
   const electricityCounter = useRef<number>(0);
   const lastCountdownTime = useRef<number>(0);
@@ -240,43 +236,6 @@ export function StremeGame() {
       startGame(); // Restart the game
     }, 3000);
   }, [gameState.collectedTokens, startGame]);
-
-  // Handle touch-based movement
-  const handleTouchMove = useCallback((clientX: number, clientY: number) => {
-    if (!gameRef.current || !gameState.isPlaying || gameState.isPaused) return;
-    
-    const rect = gameRef.current.getBoundingClientRect();
-    const touchX = clientX - rect.left;
-    const touchY = clientY - rect.top;
-    
-    // Calculate direction and distance from current position
-    const deltaX = touchX - stremeinu.x;
-    const deltaY = touchY - stremeinu.y;
-    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    
-    if (distance > 10) { // Minimum movement threshold
-      setTouchTarget({ x: touchX, y: touchY });
-      setIsMoving(true);
-      
-      // Determine primary direction
-      let direction: 'up' | 'down' | 'left' | 'right' | null = null;
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        direction = deltaX > 0 ? 'right' : 'left';
-      } else {
-        direction = deltaY > 0 ? 'down' : 'up';
-      }
-      
-      setJoystickDirection(direction);
-      setJoystickMultiplier(1 + Math.min(distance / 100, 2)); // Speed based on distance
-    }
-  }, [stremeinu.x, stremeinu.y, gameState.isPlaying, gameState.isPaused]);
-
-  const handleTouchEnd = useCallback(() => {
-    setTouchTarget(null);
-    setIsMoving(false);
-    setJoystickDirection(null);
-    setJoystickMultiplier(1);
-  }, []);
 
   // Add touch event listeners
   useEffect(() => {
@@ -464,27 +423,6 @@ export function StremeGame() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState.isPlaying, gameState.isPaused, gameState.gameOver, startGame]);
-
-  // Handle joystick movement
-  useEffect(() => {
-    if (!gameState.isPlaying || gameState.isPaused || !joystickDirection) return;
-
-    const moveInterval = setInterval(() => {
-      const moveDistance = 30 * joystickMultiplier;
-      
-      if (joystickDirection === 'up') {
-        setStremeinu(prev => ({ ...prev, y: Math.max(50, prev.y - moveDistance) }));
-      } else if (joystickDirection === 'down') {
-        setStremeinu(prev => ({ ...prev, y: Math.min(550, prev.y + moveDistance) }));
-      } else if (joystickDirection === 'left') {
-        setStremeinu(prev => ({ ...prev, x: Math.max(50, prev.x - moveDistance) }));
-      } else if (joystickDirection === 'right') {
-        setStremeinu(prev => ({ ...prev, x: Math.min(700, prev.x + moveDistance) }));
-      }
-    }, 100);
-
-    return () => clearInterval(moveInterval);
-  }, [gameState.isPlaying, gameState.isPaused, joystickDirection, joystickMultiplier]);
 
   // Handle Stremeinu movement towards touch target
   useEffect(() => {

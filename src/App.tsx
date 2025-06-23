@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { sdk } from '@farcaster/frame-sdk'
 import { StremeGame } from './components/StremeGame'
-import { ShareButton } from './components/ShareButton'
 import { SplashScreen } from './components/SplashScreen'
 import TrendingScreen from './components/TrendingScreen'
 import './App.css'
