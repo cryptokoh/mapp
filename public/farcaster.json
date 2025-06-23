@@ -1,0 +1,32 @@
+{
+  "frame": {
+    "version": "1",
+    "name": "StremeINU Superfluid River",
+    "iconUrl": "https://fcmapp.netlify.app/icon.svg",
+    "homeUrl": "https://fcmapp.netlify.app",
+    "imageUrl": "https://fcmapp.netlify.app/og-image.svg",
+    "buttonTitle": "🚀 Launch App",
+    "splashImageUrl": "https://fcmapp.netlify.app/splash.svg",
+    "splashBackgroundColor": "#000000",
+    "subtitle": "Streme'n the Trendiest Tokens ",
+    "description": "A fun game to catch the trendiest tokens on Streme.Fun in the Superfluid River.",
+    "primaryCategory": "social",
+    "tags": [
+      "farcaster",
+      "mini-app",
+      "streme",
+      "react",
+      "typescript"
+    ],
+    "heroImageUrl": "https://fcmapp.netlify.app/og-image.svg",
+    "tagline": "Streme'n the Trendiest Tokens",
+    "ogTitle": "StremeINU Superfluid River",
+    "ogDescription": "A fun game to catch the trendiest tokens on Streme.Fun in the Superfluid River.",
+    "ogImageUrl": "https://fcmapp.netlify.app/og-image.svg"
+  }
+  "accountAssociation": {
+    "header": "eyJmaWQiOjMyNDg2MywidHlwZSI6ImF1dGgiLCJrZXkiOiIweDZGNmMxYjI5NjE1QTE2MGJFM0VkMjRGNDBmZWZhMzRCMUExY2E1RTcifQ",
+    "payload": "eyJkb21haW4iOiJmY21hcHAubmV0bGlmeS5hcHAifQ",
+    "signature": "kE/p9fV+XNLZ3G7W14OfagVrma0UghPvAuePjuqkagdk4N37BVxK2YwE+yWueUT0jNkpz87DDo1UyPzrYScy5xs="
+  }
+}
