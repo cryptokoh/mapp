@@ -192,12 +192,12 @@ const TrendingScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     return `${Math.floor(diff / 86400)}d ago`;
   };
 
-  const renderTokenCard = (token: StremeToken) => (
-    <div key={token.id} className="trending-card token-card">
+  const renderTokenCard = (token: StremeToken, index: number) => (
+    <div key={`${token.id}-${index}`} className="trending-card token-card">
       <div className="card-header">
         <div className="token-info">
           <img 
-            src={token.img_url} 
+            src={token.img_url || 'https://api.streme.fun/images/streme-icon.png'} 
             alt={token.name} 
             className="token-image"
             onError={(e) => {
@@ -246,8 +246,8 @@ const TrendingScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     </div>
   );
 
-  const renderGameCard = (game: GameTrend) => (
-    <div key={game.id} className="trending-card game-card">
+  const renderGameCard = (game: GameTrend, index: number) => (
+    <div key={`${game.id}-${index}`} className="trending-card game-card">
       <div className="card-header">
         <div className="game-info">
           {game.image && (
@@ -325,8 +325,8 @@ const TrendingScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           ) : (
             <div className="trending-grid">
               {activeTab === 'tokens' 
-                ? trendingTokens.map(renderTokenCard)
-                : trendingGames.map(renderGameCard)
+                ? trendingTokens.map((token, index) => renderTokenCard(token, index))
+                : trendingGames.map((game, index) => renderGameCard(game, index))
               }
             </div>
           )}
