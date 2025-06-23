@@ -15,7 +15,7 @@ export function ShareButton({ className = '' }: ShareButtonProps) {
     try {
       // Create a cast with the game
       await sdk.actions.composeCast({
-        text: `🎮 Playing StremINU's SuperFluid River! Collect trending tokens and stake them for rewards! Built with React, TypeScript, and the Farcaster SDK. 🌊`
+        text: `🎮 Playing StremeINU's SuperFluid River! Collect trending tokens and stake them for rewards! Built with React, TypeScript, and the Farcaster SDK. 🌊`
       });
     } catch (error) {
       console.error('Failed to share:', error);

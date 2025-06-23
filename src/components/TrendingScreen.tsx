@@ -74,7 +74,7 @@ const TrendingScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         const mockGames: GameTrend[] = [
           {
             id: '1',
-            title: 'StremINU\'s SuperFluid River',
+            title: 'StremeINU\'s SuperFluid River',
             description: 'Collect tokens and explore the blockchain world',
             players: 15420,
             rating: 4.8,

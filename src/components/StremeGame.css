@@ -30,24 +30,66 @@
 .game-stats {
   display: flex;
   justify-content: center;
-  gap: 30px;
+  gap: 20px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
-.game-stats span {
-  background: linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%);
-  color: white;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-weight: 600;
+.stats-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  backdrop-filter: blur(10px);
+  min-width: 200px;
+  transition: all 0.3s ease;
+}
+
+.stats-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
+}
+
+.stats-icons {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.stats-values {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.stat-icon {
+  font-size: 20px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.stat-value {
   font-size: 14px;
-  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  line-height: 1;
+  min-width: 30px;
+  text-align: center;
 }
 
 .countdown-warning {
-  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
   animation: countdownPulse 1s ease-in-out infinite alternate;
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4) !important;
+}
+
+.countdown-warning .stat-icon {
+  animation: countdownPulse 0.8s ease-in-out infinite alternate;
 }
 
 @keyframes countdownPulse {
@@ -407,61 +449,34 @@
 
   /* Redesigned mobile game stats */
   .game-stats {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
     width: 100%;
     max-width: 100%;
   }
 
-  .game-stats span {
-    font-size: 0.75em;
-    padding: 6px 8px;
-    border-radius: 12px;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    font-weight: 600;
+  .stats-container {
+    padding: 8px 12px;
+    min-width: 160px;
+    gap: 6px;
   }
 
-  /* Specific styling for each stat type */
-  .game-stats span:first-child {
-    grid-column: 1 / -1;
-    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-    font-weight: 700;
-    font-size: 0.85em;
-    box-shadow: 0 3px 12px rgba(16, 185, 129, 0.3);
+  .stats-icons {
+    gap: 12px;
   }
 
-  .game-stats span:nth-child(2) {
-    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+  .stats-values {
+    gap: 12px;
   }
 
-  .game-stats span:nth-child(3) {
-    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  .stat-icon {
+    font-size: 16px;
   }
 
-  .game-stats span:nth-child(4) {
-    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
-    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
-  }
-
-  .countdown-warning {
-    grid-column: 1 / -1;
-    font-size: 0.8em !important;
-    font-weight: 700 !important;
-    animation: countdownPulse 0.8s ease-in-out infinite alternate;
-    box-shadow: 0 3px 12px rgba(239, 68, 68, 0.4) !important;
+  .stat-value {
+    font-size: 12px;
+    min-width: 25px;
   }
 
   .game-container {
@@ -566,6 +581,29 @@
 @media (max-width: 480px) {
   .game-header h2 {
     font-size: 1em;
+  }
+
+  .stats-container {
+    padding: 6px 10px;
+    min-width: 140px;
+    gap: 4px;
+  }
+
+  .stats-icons {
+    gap: 8px;
+  }
+
+  .stats-values {
+    gap: 8px;
+  }
+
+  .stat-icon {
+    font-size: 14px;
+  }
+
+  .stat-value {
+    font-size: 10px;
+    min-width: 20px;
   }
 
   .game-stats {
