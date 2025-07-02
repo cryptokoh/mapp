@@ -28,7 +28,7 @@
   <!-- Main content area -->
   <rect x="150" y="100" width="900" height="430" rx="30" fill="#FFFFFF" opacity="0.15"/>
   
-  <!-- Large stremeinu illustration -->
+  <!-- Large stremeinu illustration --> 
   <g transform="translate(300, 315)">
     <image 
       href="/stremeinu.png" 

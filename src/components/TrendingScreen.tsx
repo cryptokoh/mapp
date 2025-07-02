@@ -23,20 +23,8 @@ interface StremeToken {
   };
 }
 
-interface GameTrend {
-  id: string;
-  title: string;
-  description: string;
-  players: number;
-  rating: number;
-  category: string;
-  image?: string;
-}
-
 const TrendingScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const [activeTab, setActiveTab] = useState<'tokens' | 'games'>('tokens');
   const [trendingTokens, setTrendingTokens] = useState<StremeToken[]>([]);
-  const [trendingGames, setTrendingGames] = useState<GameTrend[]>([]);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,57 +57,6 @@ const TrendingScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           .slice(0, 10);
         
         setTrendingTokens(sortedTokens);
-        
-        // Mock trending games data (since there's no games API)
-        const mockGames: GameTrend[] = [
-          {
-            id: '1',
-            title: 'StremeINU\'s SuperFluid River',
-            description: 'Collect tokens and explore the blockchain world',
-            players: 15420,
-            rating: 4.8,
-            category: 'Adventure',
-            image: '/public/stremeinu.png'
-          },
-          {
-            id: '2',
-            title: 'Crypto Runner',
-            description: 'Run through the crypto landscape',
-            players: 8920,
-            rating: 4.6,
-            category: 'Runner',
-            image: '/public/stremeinu.png'
-          },
-          {
-            id: '3',
-            title: 'Token Collector',
-            description: 'Strategic token collection game',
-            players: 12350,
-            rating: 4.7,
-            category: 'Strategy',
-            image: '/public/stremeinu.png'
-          },
-          {
-            id: '4',
-            title: 'Blockchain Quest',
-            description: 'Adventure through the blockchain',
-            players: 6780,
-            rating: 4.5,
-            category: 'RPG',
-            image: '/public/stremeinu.png'
-          },
-          {
-            id: '5',
-            title: 'DeFi Tycoon',
-            description: 'Build your DeFi empire',
-            players: 4560,
-            rating: 4.4,
-            category: 'Simulation',
-            image: '/public/stremeinu.png'
-          }
-        ];
-
-        setTrendingGames(mockGames);
         setLoading(false);
       } catch (error) {
         console.error('❌ Error fetching trending data:', error);
@@ -246,63 +183,13 @@ const TrendingScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     </div>
   );
 
-  const renderGameCard = (game: GameTrend, index: number) => (
-    <div key={`${game.id}-${index}`} className="trending-card game-card">
-      <div className="card-header">
-        <div className="game-info">
-          {game.image && (
-            <img src={game.image} alt={game.title} className="game-image" />
-          )}
-          <div className="game-details">
-            <h4 className="game-title">{game.title}</h4>
-            <span className="game-category">{game.category}</span>
-          </div>
-        </div>
-        <div className="game-rating">
-          <span className="rating-stars">★★★★★</span>
-          <span className="rating-value">{game.rating}</span>
-        </div>
-      </div>
-      
-      <div className="card-content">
-        <p className="game-description">{game.description}</p>
-        
-        <div className="game-stats">
-          <div className="stat">
-            <span className="stat-label">Players</span>
-            <span className="stat-value">{formatNumber(game.players)}</span>
-          </div>
-          <div className="stat">
-            <span className="stat-label">Rating</span>
-            <span className="stat-value">{game.rating}/5.0</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="trending-overlay" onClick={handleClose}>
       <div className={`trending-panel ${isVisible ? 'show' : ''}`} onClick={(e) => e.stopPropagation()}>
         <div className="trending-header">
-          <h2>🔥 Trending</h2>
+          <h2>🔥 Trending Tokens</h2>
           <button className="close-button" onClick={handleClose}>
             ✕
-          </button>
-        </div>
-
-        <div className="trending-tabs">
-          <button
-            className={`tab ${activeTab === 'tokens' ? 'active' : ''}`}
-            onClick={() => setActiveTab('tokens')}
-          >
-            🪙 Tokens ({trendingTokens.length})
-          </button>
-          <button
-            className={`tab ${activeTab === 'games' ? 'active' : ''}`}
-            onClick={() => setActiveTab('games')}
-          >
-            🎮 Games ({trendingGames.length})
           </button>
         </div>
 
@@ -324,10 +211,7 @@ const TrendingScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </div>
           ) : (
             <div className="trending-grid">
-              {activeTab === 'tokens' 
-                ? trendingTokens.map((token, index) => renderTokenCard(token, index))
-                : trendingGames.map((game, index) => renderGameCard(game, index))
-              }
+              {trendingTokens.map((token, index) => renderTokenCard(token, index))}
             </div>
           )}
         </div>

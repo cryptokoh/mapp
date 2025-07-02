@@ -59,7 +59,17 @@ interface ConfettiPiece {
   timestamp: number;
 }
 
-export function StremeGame() {
+interface StremeGameProps {
+  onStatsUpdate?: (stats: {
+    tokensCollected: number;
+    missedTokens: number;
+    score: number;
+    lives: number;
+    level: number;
+  }) => void;
+}
+
+export function StremeGame({ onStatsUpdate }: StremeGameProps) {
   const [gameState, setGameState] = useState<GameState>({
     isPlaying: false,
     score: 0,
@@ -161,6 +171,13 @@ export function StremeGame() {
 
   // Initialize game
   const startGame = useCallback(() => {
+    console.log('🎮 Start game function called!');
+    
+    // Get game container dimensions for dynamic positioning
+    const gameContainer = gameRef.current;
+    const containerWidth = gameContainer?.clientWidth || 800;
+    const containerHeight = gameContainer?.clientHeight || 600;
+    
     setGameState({
       isPlaying: true,
       score: 0,
@@ -172,7 +189,12 @@ export function StremeGame() {
       missedTokens: 0,
       isLoading: false,
     });
-    setStremeinu({ x: 100, y: 300 });
+    
+    // Position character in the middle-left area of the screen
+    setStremeinu({ 
+      x: Math.max(50, containerWidth * 0.1), // 10% from left, minimum 50px
+      y: containerHeight * 0.5 // Middle of the screen
+    });
     setObstacles([]);
     setRiverFlow(0);
     setParticles([]);
@@ -191,10 +213,14 @@ export function StremeGame() {
     Object.values(gameState.collectedTokens).forEach(({ token, count }) => {
       // Create multiple confetti pieces for each token based on count
       for (let i = 0; i < Math.min(count, 5); i++) { // Max 5 pieces per token
+        const gameContainer = gameRef.current;
+        const containerWidth = gameContainer?.clientWidth || 800;
+        const containerHeight = gameContainer?.clientHeight || 600;
+        
         const piece: ConfettiPiece = {
           id: `confetti-${Date.now()}-${Math.random()}`,
-          x: Math.random() * 800, // Random starting position
-          y: 600, // Start from bottom
+          x: Math.random() * containerWidth, // Random starting position
+          y: containerHeight, // Start from bottom
           text: token.symbol,
           color: colors[Math.floor(Math.random() * colors.length)],
           rotation: Math.random() * 360,
@@ -212,6 +238,9 @@ export function StremeGame() {
     
     // Animate confetti
     const animateConfetti = () => {
+      const gameContainer = gameRef.current;
+      const containerHeight = gameContainer?.clientHeight || 600;
+      
       setConfetti(prev => 
         prev.map(piece => ({
           ...piece,
@@ -222,7 +251,7 @@ export function StremeGame() {
             y: piece.velocity.y + 0.5 // Gravity
           },
           rotation: piece.rotation + 2
-        })).filter(piece => piece.y < 700) // Remove pieces that fall off screen
+        })).filter(piece => piece.y < containerHeight + 100) // Remove pieces that fall off screen
       );
     };
     
@@ -233,9 +262,24 @@ export function StremeGame() {
       clearInterval(confettiInterval);
       setConfetti([]);
       setIsStaking(false);
-      startGame(); // Restart the game
+      // Restart the game by calling startGame directly
+      setGameState({
+        isPlaying: true,
+        score: 0,
+        lives: 3,
+        gameOver: false,
+        level: 1,
+        isPaused: false,
+        collectedTokens: {},
+        missedTokens: 0,
+        isLoading: false,
+      });
+      setStremeinu({ x: 100, y: 300 });
+      setObstacles([]);
+      setRiverFlow(0);
+      setParticles([]);
     }, 3000);
-  }, [gameState.collectedTokens, startGame]);
+  }, [gameState.collectedTokens]);
 
   // Add touch event listeners
   useEffect(() => {
@@ -243,6 +287,12 @@ export function StremeGame() {
     if (!gameContainer) return;
 
     const handleTouchStart = (e: TouchEvent | MouseEvent) => {
+      // Don't prevent default if clicking on a button
+      const target = e.target as HTMLElement;
+      if (target.closest('button')) {
+        return;
+      }
+      
       e.preventDefault();
       const rect = gameContainer.getBoundingClientRect();
       if (!rect) return;
@@ -260,9 +310,13 @@ export function StremeGame() {
     };
 
     const handleTouchMove = (e: TouchEvent | MouseEvent) => {
+      // Don't prevent default if clicking on a button
+      const target = e.target as HTMLElement;
+      if (target.closest('button')) {
+        return;
+      }
+      
       e.preventDefault();
-      if (!isTouchHeld) return;
-
       const rect = gameContainer.getBoundingClientRect();
       if (!rect) return;
 
@@ -302,7 +356,7 @@ export function StremeGame() {
       gameContainer.removeEventListener('touchmove', handleTouchMove);
       gameContainer.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isTouchHeld]);
+  }, []);
 
   // Handle continuous ripple generation when touch is held
   useEffect(() => {
@@ -323,10 +377,14 @@ export function StremeGame() {
 
   // Create wireframe grid effect
   const createWireframeGrid = useCallback(() => {
+    const gameContainer = gameRef.current;
+    const containerWidth = gameContainer?.clientWidth || 800;
+    const containerHeight = gameContainer?.clientHeight || 600;
+    
     const newGrid = {
       id: `wireframe-${wireframeCounter.current++}`,
-      x: Math.random() * 800,
-      y: Math.random() * 600,
+      x: Math.random() * containerWidth,
+      y: Math.random() * containerHeight,
       size: 20 + Math.random() * 40,
       opacity: 0.1 + Math.random() * 0.3,
       pulse: Math.random() * 2 * Math.PI
@@ -334,10 +392,10 @@ export function StremeGame() {
     
     setWireframeGrid(prev => [...prev, newGrid]);
     
-    // Remove grid after some time
+    // Remove old grids after 5 seconds
     setTimeout(() => {
       setWireframeGrid(prev => prev.filter(grid => grid.id !== newGrid.id));
-    }, 8000);
+    }, 5000);
   }, []);
 
   // Create electricity nodes
@@ -396,16 +454,27 @@ export function StremeGame() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!gameState.isPlaying || gameState.isPaused) return;
       
+      // Get current container dimensions for dynamic boundaries
+      const gameContainer = gameRef.current;
+      const containerWidth = gameContainer?.clientWidth || 800;
+      const containerHeight = gameContainer?.clientHeight || 600;
+      
       switch (e.key) {
         case 'ArrowUp':
         case 'w':
         case 'W':
-          setStremeinu(prev => ({ ...prev, y: Math.max(50, prev.y - 50) }));
+          setStremeinu(prev => ({ 
+            ...prev, 
+            y: Math.max(25, prev.y - 50) 
+          }));
           break;
         case 'ArrowDown':
         case 's':
         case 'S':
-          setStremeinu(prev => ({ ...prev, y: Math.min(550, prev.y + 50) }));
+          setStremeinu(prev => ({ 
+            ...prev, 
+            y: Math.min(containerHeight - 85, prev.y + 50) 
+          }));
           break;
         case ' ':
           e.preventDefault();
@@ -430,6 +499,11 @@ export function StremeGame() {
 
     const moveInterval = setInterval(() => {
       setStremeinu(prev => {
+        // Get current container dimensions for dynamic boundaries
+        const gameContainer = gameRef.current;
+        const containerWidth = gameContainer?.clientWidth || 800;
+        const containerHeight = gameContainer?.clientHeight || 600;
+        
         const dx = touchTarget.x - prev.x;
         const dy = touchTarget.y - prev.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -443,9 +517,29 @@ export function StremeGame() {
         const moveX = (dx / distance) * moveSpeed;
         const moveY = (dy / distance) * moveSpeed;
         
+        // Use dynamic boundaries based on container size
+        const minX = 25;
+        const maxX = containerWidth - 85; // Account for character width (60px) + padding
+        const minY = 25;
+        const maxY = containerHeight - 85; // Account for character height (60px) + padding
+        
+        const newX = Math.max(minX, Math.min(maxX, prev.x + moveX));
+        const newY = Math.max(minY, Math.min(maxY, prev.y + moveY));
+        
+        // Debug logging for boundary issues
+        if (newX !== prev.x + moveX || newY !== prev.y + moveY) {
+          console.log('🎮 Character boundary correction:', {
+            oldPos: { x: prev.x, y: prev.y },
+            attemptedMove: { x: prev.x + moveX, y: prev.y + moveY },
+            newPos: { x: newX, y: newY },
+            boundaries: { minX, maxX, minY, maxY },
+            containerSize: { width: containerWidth, height: containerHeight }
+          });
+        }
+        
         return {
-          x: Math.max(25, Math.min(775, prev.x + moveX)),
-          y: Math.max(25, Math.min(575, prev.y + moveY))
+          x: newX,
+          y: newY
         };
       });
     }, 16); // ~60 FPS
@@ -455,15 +549,28 @@ export function StremeGame() {
 
   // Game loop
   useEffect(() => {
-    if (!gameState.isPlaying || gameState.isPaused) return;
+    if (!gameState.isPlaying || gameState.isPaused) {
+      return;
+    }
 
     const gameLoop = (timestamp: number) => {
-      // Don't spawn obstacles if no tokens are loaded yet
-      if (trendingTokens.length === 0) {
-        animationRef.current = requestAnimationFrame(gameLoop);
-        return;
+      // Get current container dimensions
+      const gameContainer = gameRef.current;
+      const containerWidth = gameContainer?.clientWidth || 800;
+      const containerHeight = gameContainer?.clientHeight || 600;
+      
+      // Debug logging
+      if (timestamp % 1000 < 16) { // Log roughly once per second
+        console.log('🎮 Game loop running:', {
+          isPlaying: gameState.isPlaying,
+          containerWidth,
+          containerHeight,
+          stremeinu,
+          obstaclesCount: obstacles.length,
+          particlesCount: particles.length
+        });
       }
-
+      
       // Update river flow
       setRiverFlow(prev => (prev + 1) % 360);
       
@@ -472,8 +579,8 @@ export function StremeGame() {
         setParticles(prev => {
           const newParticle = {
             id: timestamp,
-            x: Math.random() * 800,
-            y: 600,
+            x: Math.random() * containerWidth,
+            y: containerHeight,
             speed: 2 + Math.random() * 3
           };
           return [...prev.slice(-19), newParticle];
@@ -481,33 +588,29 @@ export function StremeGame() {
         lastParticleTime.current = timestamp;
       }
       
-      // Spawn new obstacles
-      if (timestamp - lastObstacleTime.current > obstacleSpawnInterval) {
-        // Ensure we have tokens to spawn
-        if (trendingTokens.length > 0) {
-          // Calculate spawn area based on game container width
-          const gameWidth = gameRef.current?.clientWidth || 800;
-          const spawnAreaWidth = Math.min(200, gameWidth * 0.25); // 25% of game width, max 200px
-          const spawnAreaStart = (gameWidth - spawnAreaWidth) / 2; // Center the spawn area
-          const spawnAreaEnd = spawnAreaStart + spawnAreaWidth;
-          
-          // Ensure spawn area is within bounds
-          const minX = Math.max(50, spawnAreaStart);
-          const maxX = Math.min(gameWidth - 110, spawnAreaEnd);
-          
-          const newObstacle: GameObject = {
-            id: `obstacle-${obstacleCounter.current++}`,
-            x: minX + Math.random() * (maxX - minX), // Spawn within the narrow area
-            y: 600, // Start from bottom
-            width: 60,
-            height: 60,
-            speed: baseSpeed + (gameState.level * 0.5),
-            token: trendingTokens[Math.floor(Math.random() * trendingTokens.length)],
-            rotation: Math.random() * 360,
-            scale: 0.8 + Math.random() * 0.4,
-          };
-          setObstacles(prev => [...prev, newObstacle]);
-        }
+      // Spawn new obstacles only if tokens are available
+      if (timestamp - lastObstacleTime.current > obstacleSpawnInterval && trendingTokens.length > 0) {
+        // Calculate spawn area based on game container width
+        const spawnAreaWidth = Math.min(200, containerWidth * 0.25); // 25% of game width, max 200px
+        const spawnAreaStart = (containerWidth - spawnAreaWidth) / 2; // Center the spawn area
+        const spawnAreaEnd = spawnAreaStart + spawnAreaWidth;
+        
+        // Ensure spawn area is within bounds
+        const minX = Math.max(50, spawnAreaStart);
+        const maxX = Math.min(containerWidth - 110, spawnAreaEnd);
+        
+        const newObstacle: GameObject = {
+          id: `obstacle-${obstacleCounter.current++}`,
+          x: minX + Math.random() * (maxX - minX), // Spawn within the narrow area
+          y: containerHeight, // Start from bottom
+          width: 60,
+          height: 60,
+          speed: baseSpeed + (gameState.level * 0.5),
+          token: trendingTokens[Math.floor(Math.random() * trendingTokens.length)],
+          rotation: Math.random() * 360,
+          scale: 0.8 + Math.random() * 0.4,
+        };
+        setObstacles(prev => [...prev, newObstacle]);
         lastObstacleTime.current = timestamp;
       }
 
@@ -622,9 +725,28 @@ export function StremeGame() {
     };
   }, [gameState.isPlaying, gameState.isPaused, gameState.lives, gameState.score, gameState.level, stremeinu, trendingTokens, collectToken]);
 
+  // Debug log for game loop useEffect
+  useEffect(() => {
+    console.log('🎮 Game loop useEffect triggered:', {
+      isPlaying: gameState.isPlaying,
+      isPaused: gameState.isPaused,
+      lives: gameState.lives,
+      score: gameState.score,
+      level: gameState.level
+    });
+  }, [gameState.isPlaying, gameState.isPaused, gameState.lives, gameState.score, gameState.level]);
+
   // Initial token fetch
   useEffect(() => {
     fetchTrendingTokens();
+    
+    // Fallback timeout to ensure loading state is cleared
+    const loadingTimeout = setTimeout(() => {
+      console.log('🎮 Loading timeout - clearing loading state');
+      setGameState(prev => ({ ...prev, isLoading: false }));
+    }, 5000); // 5 second timeout
+    
+    return () => clearTimeout(loadingTimeout);
   }, [fetchTrendingTokens]);
 
   // Fetch tokens periodically
@@ -640,34 +762,47 @@ export function StremeGame() {
     return () => clearInterval(fetchInterval);
   }, [fetchTrendingTokens]);
 
+  // Stats update effect - fixed to prevent infinite loop
+  useEffect(() => {
+    if (onStatsUpdate) {
+      const totalTokensCollected = Object.values(gameState.collectedTokens).reduce((sum, { count }) => sum + count, 0);
+      onStatsUpdate({
+        tokensCollected: totalTokensCollected,
+        missedTokens: gameState.missedTokens,
+        score: gameState.score,
+        lives: gameState.lives,
+        level: gameState.level,
+      });
+    }
+  }, [gameState.collectedTokens, gameState.missedTokens, gameState.score, gameState.lives, gameState.level, onStatsUpdate]);
+
+  // Debug effect for start screen
+  useEffect(() => {
+    if (!gameState.isLoading && !gameState.isPlaying && !gameState.gameOver) {
+      console.log('🎮 Start screen should be visible, gameState:', gameState);
+    }
+  }, [gameState.isLoading, gameState.isPlaying, gameState.gameOver]);
+
+  // Debug effect for game state changes
+  useEffect(() => {
+    console.log('🎮 Game state changed:', {
+      isLoading: gameState.isLoading,
+      isPlaying: gameState.isPlaying,
+      gameOver: gameState.gameOver,
+      score: gameState.score,
+      lives: gameState.lives
+    });
+  }, [gameState.isLoading, gameState.isPlaying, gameState.gameOver, gameState.score, gameState.lives]);
+
+  // Debug effect for game rendering
+  useEffect(() => {
+    if (gameState.isPlaying) {
+      console.log('🎮 Game should be rendering, stremeinu:', stremeinu, 'obstacles:', obstacles.length);
+    }
+  }, [gameState.isPlaying, stremeinu, obstacles.length]);
+
   return (
     <div className="streme-game">
-      <div className="game-header">
-        <h2>🌊 StremeINU's SuperFluid River</h2>
-        <div className="game-stats">
-          <div className="stats-container">
-            <div className="stats-icons">
-              <span className="stat-icon">🏆</span>
-              <span className="stat-icon">❤️</span>
-              <span className="stat-icon">⭐</span>
-              <span className="stat-icon">💔</span>
-            </div>
-            <div className="stats-values">
-              <span className="stat-value">{gameState.score}</span>
-              <span className="stat-value">{gameState.lives}</span>
-              <span className="stat-value">{gameState.level}</span>
-              <span className="stat-value">{gameState.missedTokens}/6</span>
-            </div>
-          </div>
-          {countdown !== null && (
-            <div className="stat-item countdown-warning">
-              <div className="stat-icon">⚠️</div>
-              <div className="stat-value">{countdown}s</div>
-            </div>
-          )}
-        </div>
-      </div>
-
       <div className="game-container" ref={gameRef}>
         {/* Loading Screen */}
         {gameState.isLoading && (
@@ -692,7 +827,36 @@ export function StremeGame() {
             <h3>Ready to StremeWiFINU?</h3>
             <p>Help StremeINU navigate the river of trending tokens!</p>
             <p>👆 Touch in the direction to move our Inu friend</p>
-            <button onClick={startGame} className="start-button">
+            
+            {/* Show character on start screen */}
+            <div
+              className="stremeinu-character"
+              style={{
+                position: 'relative',
+                margin: '20px auto',
+                display: 'block',
+                zIndex: 5,
+              }}
+            >
+              <img 
+                src="/stremeinu.png" 
+                alt="Stremeinu" 
+                onError={(e) => {
+                  console.log('Start screen character image failed to load, using fallback');
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+              <div className="character-fallback hidden">🐕</div>
+            </div>
+            
+            <button 
+              onClick={() => {
+                console.log('🎯 Start button clicked!');
+                startGame();
+              }} 
+              className="start-button"
+            >
               🎮 Start Adventure
             </button>
           </div>
@@ -888,7 +1052,16 @@ export function StremeGame() {
                 top: `${stremeinu.y}px`,
               }}
             >
-              <img src="/stremeinu.png" alt="Stremeinu" />
+              <img 
+                src="/stremeinu.png" 
+                alt="Stremeinu" 
+                onError={(e) => {
+                  console.log('Character image failed to load, using fallback');
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+              <div className="character-fallback hidden">🐕</div>
             </div>
 
             {/* Obstacles */}
