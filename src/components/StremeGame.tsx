@@ -456,7 +456,6 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
       
       // Get current container dimensions for dynamic boundaries
       const gameContainer = gameRef.current;
-      const containerWidth = gameContainer?.clientWidth || 800;
       const containerHeight = gameContainer?.clientHeight || 600;
       
       switch (e.key) {
