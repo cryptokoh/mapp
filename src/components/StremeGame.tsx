@@ -134,6 +134,29 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
     }
   }, []);
 
+  // Utility function to calculate centered character position
+  const calculateCharacterPosition = useCallback(() => {
+    const gameContainer = gameRef.current;
+    const containerWidth = gameContainer?.clientWidth || 800;
+    const containerHeight = gameContainer?.clientHeight || 600;
+    
+    const characterWidth = 60;
+    const characterHeight = 60;
+    
+    // Calculate center position
+    const centerX = (containerWidth - characterWidth) / 2;
+    const centerY = (containerHeight - characterHeight) / 2;
+    
+    // Add gameplay offset (15% to the left for better token collection)
+    const gameplayOffsetX = Math.max(0, containerWidth * 0.15);
+    
+    // Final position with boundaries
+    const finalX = Math.max(25, centerX - gameplayOffsetX);
+    const finalY = Math.max(25, Math.min(containerHeight - characterHeight - 25, centerY));
+    
+    return { x: finalX, y: finalY };
+  }, []);
+
   // Handle token collection
   const collectToken = useCallback((token: StremeToken, x: number, y: number) => {
     // Create burst effect with unique key
@@ -173,11 +196,6 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
   const startGame = useCallback(() => {
     console.log('🎮 Start game function called!');
     
-    // Get game container dimensions for dynamic positioning
-    const gameContainer = gameRef.current;
-    const containerWidth = gameContainer?.clientWidth || 800;
-    const containerHeight = gameContainer?.clientHeight || 600;
-    
     setGameState({
       isPlaying: true,
       score: 0,
@@ -190,15 +208,15 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
       isLoading: false,
     });
     
-    // Position character in the middle-left area of the screen
-    setStremeinu({ 
-      x: Math.max(50, containerWidth * 0.1), // 10% from left, minimum 50px
-      y: containerHeight * 0.5 // Middle of the screen
-    });
+    // Use utility function to calculate character position
+    const position = calculateCharacterPosition();
+    console.log('🎮 Character positioned at:', position);
+    setStremeinu(position);
+    
     setObstacles([]);
     setRiverFlow(0);
     setParticles([]);
-  }, []);
+  }, [calculateCharacterPosition]);
 
   // Handle staking tokens with confetti
   const handleStakeTokens = useCallback(() => {
@@ -262,7 +280,7 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
       clearInterval(confettiInterval);
       setConfetti([]);
       setIsStaking(false);
-      // Restart the game by calling startGame directly
+      // Restart the game with proper character positioning
       setGameState({
         isPlaying: true,
         score: 0,
@@ -274,7 +292,10 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
         missedTokens: 0,
         isLoading: false,
       });
-      setStremeinu({ x: 100, y: 300 });
+      
+      // Use utility function for consistent positioning
+      const position = calculateCharacterPosition();
+      setStremeinu(position);
       setObstacles([]);
       setRiverFlow(0);
       setParticles([]);
