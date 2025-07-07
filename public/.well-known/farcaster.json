@@ -1,4 +1,9 @@
 {
+ "accountAssociation": {
+    "header": "eyJmaWQiOjMyNDg2MywidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDBBNDE5MjJDMjhiODY2YjM4ZjFlOEQ4NjA2RDljMDk4MTM2NThjNzIifQ",
+    "payload": "eyJkb21haW4iOiJmY21hcHAubmV0bGlmeS5hcHAifQ",
+    "signature": "MHg5YTZmN2ZkMjU3OWE3MTlhNmRlMTliMzljOGVlODhjM2M4MDFkMTgzZThmNjQ1MWQ2ZDM2ZDVjYmQxMTI3ZjA3Njc3NGE3YTQyMDYyZTAxYTIwMmFlYTE4ZDhlMDg1OWEwYzliNThkMjgzMTI5NDI0YjhmM2FmMmM2MWYxY2ZlZDFi"
+  }
   "frame": {
     "version": "1",
     "name": "StremeINU Superfluid River",
