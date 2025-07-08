@@ -2,6 +2,9 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import './StremeGame.css';
 import { ShareButton } from './ShareButton';
 
+// Width of the vertical gameplay lane
+const LANE_WIDTH = 80;
+
 interface StremeToken {
   id: number;
   name: string;
@@ -144,10 +147,11 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
     const characterHeight = 60;
     
     // Calculate center position for vertical-only gameplay
-    const centerX = (containerWidth - characterWidth) / 2;
+    const laneLeft = (containerWidth - LANE_WIDTH) / 2;
+    const centerX = laneLeft + (LANE_WIDTH - characterWidth) / 2;
     const centerY = (containerHeight - characterHeight) / 2;
-    
-    // Keep character horizontally centered for vertical-only movement
+
+    // Keep character horizontally centered within the lane
     const finalX = centerX;
     const finalY = Math.max(25, Math.min(containerHeight - characterHeight - 25, centerY));
     
@@ -533,8 +537,9 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
         const moveSpeed = 8;
         const moveY = (dy / distance) * moveSpeed;
         
-        // Restrict movement to vertical only - character stays in center horizontally
-        const centerX = (containerWidth - 60) / 2; // Center position accounting for character width
+        // Restrict movement to vertical only - keep character within lane
+        const laneLeft = (containerWidth - LANE_WIDTH) / 2;
+        const centerX = laneLeft + (LANE_WIDTH - 60) / 2; // 60 = character width
         const minY = 25;
         const maxY = containerHeight - 85; // Account for character height (60px) + padding
         
@@ -606,7 +611,8 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
       // Spawn new obstacles only if tokens are available
       if (timestamp - lastObstacleTime.current > obstacleSpawnInterval && trendingTokens.length > 0) {
         // Spawn tokens in center column only (vertical gameplay)
-        const centerX = (containerWidth - 60) / 2; // Center position accounting for token width
+        const laneLeft = (containerWidth - LANE_WIDTH) / 2;
+        const centerX = laneLeft + (LANE_WIDTH - 60) / 2; // 60 = token width
         
         const newObstacle: GameObject = {
           id: `obstacle-${obstacleCounter.current++}`,
@@ -818,13 +824,15 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
 
       const width = container.clientWidth;
 
-      // Center character horizontally
-      setStremeinu(prev => ({ ...prev, x: (width - 60) / 2 }));
+      const laneLeft = (width - LANE_WIDTH) / 2;
 
-      // Keep all existing obstacles within the center column
+      // Center character horizontally within the lane
+      setStremeinu(prev => ({ ...prev, x: laneLeft + (LANE_WIDTH - 60) / 2 }));
+
+      // Keep all existing obstacles within the lane
       setObstacles(prev => prev.map(ob => ({
         ...ob,
-        x: (width - ob.width) / 2
+        x: laneLeft + (LANE_WIDTH - ob.width) / 2
       })));
     };
 
@@ -836,6 +844,11 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
   return (
     <div className="streme-game">
       <div className="game-container" ref={gameRef}>
+        {/* Visual boundaries for the vertical lane */}
+        <div className="vertical-boundaries" aria-hidden="true">
+          <div className="boundary-line left" />
+          <div className="boundary-line right" />
+        </div>
         {/* Loading Screen */}
         {gameState.isLoading && (
           <div className="game-loading">
