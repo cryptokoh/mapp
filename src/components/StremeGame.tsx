@@ -143,15 +143,12 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
     const characterWidth = 60;
     const characterHeight = 60;
     
-    // Calculate center position
+    // Calculate center position for vertical-only gameplay
     const centerX = (containerWidth - characterWidth) / 2;
     const centerY = (containerHeight - characterHeight) / 2;
     
-    // Add gameplay offset (15% to the left for better token collection)
-    const gameplayOffsetX = Math.max(0, containerWidth * 0.15);
-    
-    // Final position with boundaries
-    const finalX = Math.max(25, centerX - gameplayOffsetX);
+    // Keep character horizontally centered for vertical-only movement
+    const finalX = centerX;
     const finalY = Math.max(25, Math.min(containerHeight - characterHeight - 25, centerY));
     
     return { x: finalX, y: finalY };
@@ -537,22 +534,21 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
         const moveX = (dx / distance) * moveSpeed;
         const moveY = (dy / distance) * moveSpeed;
         
-        // Use dynamic boundaries based on container size
-        const minX = 25;
-        const maxX = containerWidth - 85; // Account for character width (60px) + padding
+        // Restrict movement to vertical only - character stays in center horizontally
+        const centerX = (containerWidth - 60) / 2; // Center position accounting for character width
         const minY = 25;
         const maxY = containerHeight - 85; // Account for character height (60px) + padding
         
-        const newX = Math.max(minX, Math.min(maxX, prev.x + moveX));
+        const newX = centerX; // Keep character horizontally centered
         const newY = Math.max(minY, Math.min(maxY, prev.y + moveY));
         
-        // Debug logging for boundary issues
-        if (newX !== prev.x + moveX || newY !== prev.y + moveY) {
-          console.log('🎮 Character boundary correction:', {
+        // Debug logging for vertical-only movement
+        if (newY !== prev.y + moveY) {
+          console.log('🎮 Character vertical boundary correction:', {
             oldPos: { x: prev.x, y: prev.y },
-            attemptedMove: { x: prev.x + moveX, y: prev.y + moveY },
+            attemptedMoveY: prev.y + moveY,
             newPos: { x: newX, y: newY },
-            boundaries: { minX, maxX, minY, maxY },
+            boundaries: { minY, maxY },
             containerSize: { width: containerWidth, height: containerHeight }
           });
         }
@@ -610,18 +606,12 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
       
       // Spawn new obstacles only if tokens are available
       if (timestamp - lastObstacleTime.current > obstacleSpawnInterval && trendingTokens.length > 0) {
-        // Calculate spawn area based on game container width
-        const spawnAreaWidth = Math.min(200, containerWidth * 0.25); // 25% of game width, max 200px
-        const spawnAreaStart = (containerWidth - spawnAreaWidth) / 2; // Center the spawn area
-        const spawnAreaEnd = spawnAreaStart + spawnAreaWidth;
-        
-        // Ensure spawn area is within bounds
-        const minX = Math.max(50, spawnAreaStart);
-        const maxX = Math.min(containerWidth - 110, spawnAreaEnd);
+        // Spawn tokens in center column only (vertical gameplay)
+        const centerX = (containerWidth - 60) / 2; // Center position accounting for token width
         
         const newObstacle: GameObject = {
           id: `obstacle-${obstacleCounter.current++}`,
-          x: minX + Math.random() * (maxX - minX), // Spawn within the narrow area
+          x: centerX, // Spawn in center column only
           y: containerHeight, // Start from bottom
           width: 60,
           height: 60,
