@@ -531,7 +531,6 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
         }
         
         const moveSpeed = 8;
-        const moveX = (dx / distance) * moveSpeed;
         const moveY = (dy / distance) * moveSpeed;
         
         // Restrict movement to vertical only - character stays in center horizontally
@@ -810,6 +809,29 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
       console.log('🎮 Game should be rendering, stremeinu:', stremeinu, 'obstacles:', obstacles.length);
     }
   }, [gameState.isPlaying, stremeinu, obstacles.length]);
+
+  // Recenter character and obstacles when the container size changes
+  useEffect(() => {
+    const handleResize = () => {
+      const container = gameRef.current;
+      if (!container) return;
+
+      const width = container.clientWidth;
+
+      // Center character horizontally
+      setStremeinu(prev => ({ ...prev, x: (width - 60) / 2 }));
+
+      // Keep all existing obstacles within the center column
+      setObstacles(prev => prev.map(ob => ({
+        ...ob,
+        x: (width - ob.width) / 2
+      })));
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <div className="streme-game">
