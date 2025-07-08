@@ -6,10 +6,18 @@ import { SplashScreen } from './components/SplashScreen'
 import TrendingScreen from './components/TrendingScreen'
 import './App.css'
 
+interface GameStats {
+  tokensCollected: number
+  missedTokens: number
+  score: number
+  lives: number
+  level: number
+}
+
 function App() {
   const [showSplash, setShowSplash] = useState(true)
   const [showTrending, setShowTrending] = useState(false)
-  const [gameStats, setGameStats] = useState({
+  const [gameStats, setGameStats] = useState<GameStats>({
     tokensCollected: 0,
     missedTokens: 0,
     score: 0,
@@ -48,7 +56,7 @@ function App() {
     setShowSplash(false)
   }
 
-  const handleGameStatsUpdate = useCallback((stats: any) => {
+  const handleGameStatsUpdate = useCallback((stats: GameStats) => {
     setGameStats(stats)
   }, [])
 
