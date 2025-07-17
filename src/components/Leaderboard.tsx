@@ -132,7 +132,14 @@ export function Leaderboard({ isOpen, onClose, currentUserScore }: LeaderboardPr
                 />
                 <div className="user-details">
                   <span className="user-name">{user.displayName}</span>
-                  <span className="user-username">@{user.username}</span>
+                  <a 
+                    href={`https://warpcast.com/${user.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="user-username clickable"
+                  >
+                    @{user.username}
+                  </a>
                 </div>
               </div>
               <div className="user-performance">
@@ -206,7 +213,14 @@ export function Leaderboard({ isOpen, onClose, currentUserScore }: LeaderboardPr
                     />
                     <div className="entry-info">
                       <span className="entry-name">{entry.displayName}</span>
-                      <span className="entry-username">@{entry.username}</span>
+                      <a 
+                        href={`https://warpcast.com/${entry.username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="entry-username clickable"
+                      >
+                        @{entry.username}
+                      </a>
                     </div>
                   </div>
                   
