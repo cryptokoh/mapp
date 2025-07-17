@@ -1,82 +1,67 @@
 import { useState } from 'react';
 import { sdk } from '@farcaster/frame-sdk';
+import { socialSharingService } from '../services/socialSharing';
 import './ShareButton.css';
 
 interface ShareButtonProps {
   className?: string;
+  gameData?: {
+    score: number;
+    tokensCollected: number;
+    level: number;
+    rank?: number;
+  };
 }
 
-export function ShareButton({ className = '' }: ShareButtonProps) {
+export function ShareButton({ className = '', gameData }: ShareButtonProps) {
   const [isSharing, setIsSharing] = useState(false);
-  const [showOptions, setShowOptions] = useState(false);
 
   const handleShare = async () => {
     setIsSharing(true);
     try {
-      // Create a cast with the game
-      await sdk.actions.composeCast({
-        text: `🎮 Playing StremeINU's SuperFluid River! Collect trending tokens and stake them for rewards! Built with React, TypeScript, and the Farcaster SDK. 🌊`
-      });
+      if (gameData) {
+        // Create custom share text for Farcaster
+        const shareText = `I just caught ${gameData.tokensCollected} SuperFluid tokens on @StremeInu's $SuperInu River Adventure! 🌊🐕\n\n🏆 Score: ${gameData.score.toLocaleString()}\n🪙 Tokens: ${gameData.tokensCollected}\n⭐ Level: ${gameData.level}\n\n🎮 Help SuperInu catch streaming tokens in this addictive river game!\n\nBuilt with React + Farcaster SDK 🚀`;
+        
+        await sdk.actions.composeCast({
+          text: shareText
+        });
+      } else {
+        // Share general game
+        await sdk.actions.composeCast({
+          text: `🌊 Just discovered SuperInu River! 🐕\n\nHelp SuperInu catch streaming SuperFluid tokens in this addictive river adventure! 🪙\n\n🎮 Tap to swim, collect real tokens, beat your high score!\n\nBuilt with React + Farcaster SDK 🚀`
+        });
+      }
     } catch (error) {
       console.error('Failed to share:', error);
+      // Fallback to other sharing methods
+      if (gameData) {
+        await socialSharingService.openShareOptions(gameData);
+      }
     } finally {
       setIsSharing(false);
-      setShowOptions(false);
     }
   };
 
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      
-      // Show a brief success message
-      const button = document.querySelector('.share-button') as HTMLElement;
-      if (button) {
-        const originalText = button.textContent;
-        button.textContent = '✅ Copied!';
-        setTimeout(() => {
-          button.textContent = originalText;
-        }, 2000);
-      }
-    } catch (error) {
-      console.error('Failed to copy link:', error);
-    }
-    setShowOptions(false);
-  };
+
+  const achievementText = gameData ? socialSharingService.getAchievementText(gameData) : null;
 
   return (
     <div className={`share-container ${className}`}>
-      <button
-        className="share-button"
-        onClick={() => setShowOptions(!showOptions)}
-        disabled={isSharing}
-      >
-        {isSharing ? '📤 Sharing...' : '🎮 Share Game'}
-      </button>
-      
-      {showOptions && (
-        <div className="share-options">
-          <button 
-            className="share-option"
-            onClick={handleShare}
-            disabled={isSharing}
-          >
-            📱 Cast to Farcaster
-          </button>
-          <button 
-            className="share-option"
-            onClick={handleCopyLink}
-          >
-            📋 Copy Link
-          </button>
-          <button 
-            className="share-option"
-            onClick={() => setShowOptions(false)}
-          >
-            ❌ Cancel
-          </button>
+      {achievementText && (
+        <div className="achievement-text">
+          {achievementText}
         </div>
       )}
+      
+      <button
+        className="share-button"
+        onClick={handleShare}
+        disabled={isSharing}
+      >
+        {isSharing ? '📤 Sharing...' : gameData ? '🚀 Share Score' : '🎮 Share Game'}
+      </button>
+      
     </div>
   );
 }

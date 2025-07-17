@@ -1,22 +1,18 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import './StremeGame.css';
 import { ShareButton } from './ShareButton';
+import { Leaderboard } from './Leaderboard';
+import { serverLeaderboardService } from '../services/serverLeaderboard';
+import { useFarcaster } from '../hooks/useFarcaster';
+import { tokenService, type StremeToken } from '../services/tokenService';
+import { TokenCollectedPopup } from './TokenCollectedPopup';
 
-// Width of the vertical gameplay lane
-const LANE_WIDTH = 80;
+// Game constants
+const MAX_CONTAINER_WIDTH = 424;
+const CHARACTER_SIZE = 60;
+const TOKEN_SIZE = 50;
 
-interface StremeToken {
-  id: number;
-  name: string;
-  symbol: string;
-  img_url: string;
-  username: string;
-  marketData: {
-    price: number;
-    priceChange24h: number;
-    volume24h: number;
-  };
-}
+// StremeToken interface is imported from tokenService
 
 interface GameState {
   isPlaying: boolean;
@@ -24,42 +20,29 @@ interface GameState {
   lives: number;
   gameOver: boolean;
   level: number;
-  isPaused: boolean;
-  collectedTokens: { [tokenId: number]: { token: StremeToken; count: number } };
+  tokensCollected: number;
   missedTokens: number;
-  isLoading: boolean;
+}
+
+interface CollectedTokenPopup {
+  id: string;
+  token: StremeToken;
+  value: number;
+  x: number;
+  y: number;
 }
 
 interface GameObject {
   id: string;
   x: number;
   y: number;
-  width: number;
-  height: number;
   speed: number;
-  token?: StremeToken;
-  rotation: number;
-  scale: number;
-  isCollected?: boolean;
-}
-
-interface BurstEffect {
-  id: string;
-  x: number;
-  y: number;
   token: StremeToken;
-  timestamp: number;
 }
 
-interface ConfettiPiece {
-  id: string;
+interface CharacterPosition {
   x: number;
   y: number;
-  text: string;
-  color: string;
-  rotation: number;
-  velocity: { x: number; y: number };
-  timestamp: number;
 }
 
 interface StremeGameProps {
@@ -73,662 +56,350 @@ interface StremeGameProps {
 }
 
 export function StremeGame({ onStatsUpdate }: StremeGameProps) {
+  console.log('🎮 StremeGame initializing...');
+
+  // Farcaster integration
+  const { user } = useFarcaster();
+
+  // Game state
   const [gameState, setGameState] = useState<GameState>({
     isPlaying: false,
     score: 0,
     lives: 3,
     gameOver: false,
     level: 1,
-    isPaused: false,
-    collectedTokens: {},
+    tokensCollected: 0,
     missedTokens: 0,
-    isLoading: true,
   });
+
+  // Leaderboard state
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+
+  // Character position and movement
+  const [character, setCharacter] = useState<CharacterPosition>({ x: 0, y: 0 });
+  const [targetPosition, setTargetPosition] = useState<CharacterPosition>({ x: 0, y: 0 });
   
-  const [stremeinu, setStremeinu] = useState({ x: 100, y: 300 });
-  const [obstacles, setObstacles] = useState<GameObject[]>([]);
-  const [trendingTokens, setTrendingTokens] = useState<StremeToken[]>([]);
-  const [riverFlow, setRiverFlow] = useState(0);
-  const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, speed: number}>>([]);
-  const [burstEffects, setBurstEffects] = useState<BurstEffect[]>([]);
-  const [confetti, setConfetti] = useState<ConfettiPiece[]>([]);
-  const [isStaking, setIsStaking] = useState(false);
-  const [wireframeGrid, setWireframeGrid] = useState<Array<{id: string, x: number, y: number, size: number, opacity: number, pulse: number}>>([]);
-  const [electricityNodes, setElectricityNodes] = useState<Array<{id: string, x: number, y: number, connections: string[], pulse: number}>>([]);
-  const [touchTarget, setTouchTarget] = useState<{ x: number; y: number } | null>(null);
-  const [isTouchHeld, setIsTouchHeld] = useState(false);
-  const [rippleCount, setRippleCount] = useState(0);
-  const [isMoving, setIsMoving] = useState(false);
-  const [countdown, setCountdown] = useState<number | null>(null);
+  // Game objects
+  const [tokens, setTokens] = useState<GameObject[]>([]);
   
+  // Available tokens for spawning (fetched from Streme.fun API)
+  const [availableTokens, setAvailableTokens] = useState<StremeToken[]>([]);
+  const [tokensLoading, setTokensLoading] = useState(true);
+  
+  // Token collection tracking
+  const [collectedTokenPopups, setCollectedTokenPopups] = useState<CollectedTokenPopup[]>([]);
+  const [tokenStats, setTokenStats] = useState<Record<string, { count: number; totalValue: number; name: string; img_url: string }>>({});
+
+  // Refs
   const gameRef = useRef<HTMLDivElement>(null);
-  const animationRef = useRef<number | undefined>(undefined);
-  const lastObstacleTime = useRef<number>(0);
-  const lastTokenFetch = useRef<number>(0);
-  const lastParticleTime = useRef<number>(0);
-  const burstCounter = useRef<number>(0);
-  const wireframeCounter = useRef<number>(0);
-  const electricityCounter = useRef<number>(0);
-  const lastCountdownTime = useRef<number>(0);
-  const obstacleCounter = useRef<number>(0);
-  const baseSpeed = 3;
-  const obstacleSpawnInterval = 2000; // Spawn obstacles every 2 seconds
+  const animationRef = useRef<number>(0);
+  const lastTokenSpawn = useRef<number>(0);
+  const tokenCounter = useRef<number>(0);
 
-  // Fetch trending tokens from Streme.Fun API
-  const fetchTrendingTokens = useCallback(async () => {
-    try {
-      const response = await fetch('https://api.streme.fun/api/tokens/trending');
-      if (response.ok) {
-        const tokens: StremeToken[] = await response.json();
-        setTrendingTokens(tokens.slice(0, 20)); // Use first 20 tokens
-        console.log('🎮 Fetched trending tokens:', tokens.length);
-        // Set loading to false after tokens are loaded
-        setGameState(prev => ({ ...prev, isLoading: false }));
+  // Calculate container dimensions
+  const getGameDimensions = useCallback(() => {
+    const container = gameRef.current;
+    const width = Math.min(container?.clientWidth || MAX_CONTAINER_WIDTH, MAX_CONTAINER_WIDTH);
+    const height = container?.clientHeight || 695; // Default to mobile app height
+    console.log('🎮 Game dimensions:', { width, height });
+    return { width, height };
+  }, []);
+
+  // Calculate character center position
+  const getCharacterCenterPosition = useCallback(() => {
+    const { width, height } = getGameDimensions();
+    const centerX = (width - CHARACTER_SIZE) / 2;
+    const centerY = (height - CHARACTER_SIZE) / 2;
+    return { x: centerX, y: centerY };
+  }, [getGameDimensions]);
+
+  // Fetch trending tokens from Streme.fun API
+  useEffect(() => {
+    const loadTokens = async () => {
+      try {
+        setTokensLoading(true);
+        const trendingTokens = await tokenService.getTrendingTokens();
+        setAvailableTokens(trendingTokens);
+        console.log('🪙 Loaded trending tokens for game:', trendingTokens.length);
+      } catch (error) {
+        console.error('❌ Failed to load tokens:', error);
+        // Fallback tokens will be used by the service
+        const fallbackTokens = await tokenService.getTrendingTokens();
+        setAvailableTokens(fallbackTokens);
+      } finally {
+        setTokensLoading(false);
       }
-    } catch (error) {
-      console.error('❌ Error fetching trending tokens:', error);
-      // Fallback tokens if API fails
-      setTrendingTokens([
-        { id: 1, name: 'Streme', symbol: 'STREME', img_url: '/stremeinu.png', username: 'streme', marketData: { price: 0.0001, priceChange24h: 5.2, volume24h: 1000 } },
-        { id: 2, name: 'Farcaster', symbol: 'FARC', img_url: '/stremeinu.png', username: 'farcaster', marketData: { price: 0.0002, priceChange24h: -2.1, volume24h: 800 } },
-      ]);
-      // Set loading to false even if API fails
-      setGameState(prev => ({ ...prev, isLoading: false }));
-    }
-  }, []);
-
-  // Utility function to calculate centered character position
-  const calculateCharacterPosition = useCallback(() => {
-    const gameContainer = gameRef.current;
-    const containerWidth = gameContainer?.clientWidth || 800;
-    const containerHeight = gameContainer?.clientHeight || 600;
-    
-    const characterWidth = 60;
-    const characterHeight = 60;
-    
-    // Calculate center position for vertical-only gameplay
-    const laneLeft = (containerWidth - LANE_WIDTH) / 2;
-    const centerX = laneLeft + (LANE_WIDTH - characterWidth) / 2;
-    const centerY = (containerHeight - characterHeight) / 2;
-
-    // Keep character horizontally centered within the lane
-    const finalX = centerX;
-    const finalY = Math.max(25, Math.min(containerHeight - characterHeight - 25, centerY));
-    
-    return { x: finalX, y: finalY };
-  }, []);
-
-  // Handle token collection
-  const collectToken = useCallback((token: StremeToken, x: number, y: number) => {
-    // Create burst effect with unique key
-    burstCounter.current += 1;
-    const burstEffect: BurstEffect = {
-      id: `burst-${Date.now()}-${burstCounter.current}`,
-      x,
-      y,
-      token,
-      timestamp: Date.now()
     };
-    
-    setBurstEffects(prev => [...prev, burstEffect]);
-    
-    // Remove burst effect after animation
-    setTimeout(() => {
-      setBurstEffects(prev => prev.filter(effect => effect.id !== burstEffect.id));
-    }, 1000);
-    
-    setGameState(prev => {
-      const currentCount = prev.collectedTokens[token.id]?.count || 0;
-      return {
-        ...prev,
-        collectedTokens: {
-          ...prev.collectedTokens,
-          [token.id]: {
-            token,
-            count: currentCount + 1
-          }
-        },
-        score: prev.score + 100 // Bonus points for collecting tokens
-      };
-    });
+
+    loadTokens();
   }, []);
 
-  // Initialize game
-  const startGame = useCallback(() => {
-    console.log('🎮 Start game function called!');
-    
-    setGameState({
-      isPlaying: true,
-      score: 0,
-      lives: 3,
-      gameOver: false,
-      level: 1,
-      isPaused: false,
-      collectedTokens: {},
-      missedTokens: 0,
-      isLoading: false,
-    });
-    
-    // Use utility function to calculate character position
-    const position = calculateCharacterPosition();
-    console.log('🎮 Character positioned at:', position);
-    setStremeinu(position);
-    
-    setObstacles([]);
-    setRiverFlow(0);
-    setParticles([]);
-  }, [calculateCharacterPosition]);
+  // Initialize character position
+  useEffect(() => {
+    const centerPos = getCharacterCenterPosition();
+    setCharacter(centerPos);
+    setTargetPosition(centerPos);
+    console.log('🎮 Character positioned at center:', centerPos);
+    console.log('🎮 Available tokens:', availableTokens.length);
+  }, [getCharacterCenterPosition, availableTokens.length]);
 
-  // Handle staking tokens with confetti
-  const handleStakeTokens = useCallback(() => {
-    if (Object.keys(gameState.collectedTokens).length === 0) return;
-    
-    setIsStaking(true);
-    
-    // Create confetti pieces from collected tokens
-    const confettiPieces: ConfettiPiece[] = [];
-    const colors = ['#8B5CF6', '#A855F7', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444'];
-    
-    Object.values(gameState.collectedTokens).forEach(({ token, count }) => {
-      // Create multiple confetti pieces for each token based on count
-      for (let i = 0; i < Math.min(count, 5); i++) { // Max 5 pieces per token
-        const gameContainer = gameRef.current;
-        const containerWidth = gameContainer?.clientWidth || 800;
-        const containerHeight = gameContainer?.clientHeight || 600;
-        
-        const piece: ConfettiPiece = {
-          id: `confetti-${Date.now()}-${Math.random()}`,
-          x: Math.random() * containerWidth, // Random starting position
-          y: containerHeight, // Start from bottom
-          text: token.symbol,
-          color: colors[Math.floor(Math.random() * colors.length)],
-          rotation: Math.random() * 360,
-          velocity: {
-            x: (Math.random() - 0.5) * 8, // Random horizontal velocity
-            y: -15 - Math.random() * 10 // Upward velocity with variation
-          },
-          timestamp: Date.now()
-        };
-        confettiPieces.push(piece);
-      }
-    });
-    
-    setConfetti(confettiPieces);
-    
-    // Animate confetti
-    const animateConfetti = () => {
-      const gameContainer = gameRef.current;
-      const containerHeight = gameContainer?.clientHeight || 600;
-      
-      setConfetti(prev => 
-        prev.map(piece => ({
-          ...piece,
-          x: piece.x + piece.velocity.x,
-          y: piece.y + piece.velocity.y,
-          velocity: {
-            x: piece.velocity.x * 0.99, // Air resistance
-            y: piece.velocity.y + 0.5 // Gravity
-          },
-          rotation: piece.rotation + 2
-        })).filter(piece => piece.y < containerHeight + 100) // Remove pieces that fall off screen
-      );
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      const centerPos = getCharacterCenterPosition();
+      setCharacter(centerPos);
+      setTargetPosition(centerPos);
     };
-    
-    const confettiInterval = setInterval(animateConfetti, 50);
-    
-    // Stop confetti and restart game after 3 seconds
-    setTimeout(() => {
-      clearInterval(confettiInterval);
-      setConfetti([]);
-      setIsStaking(false);
-      // Restart the game with proper character positioning
-      setGameState({
-        isPlaying: true,
-        score: 0,
-        lives: 3,
-        gameOver: false,
-        level: 1,
-        isPaused: false,
-        collectedTokens: {},
-        missedTokens: 0,
-        isLoading: false,
-      });
-      
-      // Use utility function for consistent positioning
-      const position = calculateCharacterPosition();
-      setStremeinu(position);
-      setObstacles([]);
-      setRiverFlow(0);
-      setParticles([]);
-    }, 3000);
-  }, [gameState.collectedTokens]);
 
-  // Add touch event listeners
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [getCharacterCenterPosition]);
+
+  // Mobile-first tap-to-move controls
   useEffect(() => {
     const gameContainer = gameRef.current;
     if (!gameContainer) return;
 
-    const handleTouchStart = (e: TouchEvent | MouseEvent) => {
-      // Don't prevent default if clicking on a button
+    const handleTapMove = (clientX: number, clientY: number) => {
+      if (!gameState.isPlaying) return;
+
+      const rect = gameContainer.getBoundingClientRect();
+      const { width, height } = getGameDimensions();
+      
+      // Calculate tap position relative to container
+      const tapX = clientX - rect.left;
+      const tapY = clientY - rect.top;
+      
+      // Calculate target position (center character on tap point)
+      const targetX = tapX - CHARACTER_SIZE / 2;
+      const targetY = tapY - CHARACTER_SIZE / 2;
+      
+      // Clamp to boundaries and set target
+      const clampedX = Math.max(0, Math.min(targetX, width - CHARACTER_SIZE));
+      const clampedY = Math.max(0, Math.min(targetY, height - CHARACTER_SIZE));
+      
+      setTargetPosition({ x: clampedX, y: clampedY });
+    };
+
+    const handleTouch = (e: TouchEvent) => {
+      // Only handle touch if we're playing and not touching a button
       const target = e.target as HTMLElement;
-      if (target.closest('button')) {
-        return;
+      if (target.closest('button') || target.closest('.share-container') || target.closest('.game-start') || target.closest('.game-over')) {
+        return; // Let buttons handle their own events
       }
       
       e.preventDefault();
-      const rect = gameContainer.getBoundingClientRect();
-      if (!rect) return;
-
-      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
-
-      setTouchTarget({ x, y });
-      setIsTouchHeld(true);
-      setRippleCount(prev => prev + 1);
-      setIsMoving(true);
+      if (e.touches.length > 0) {
+        handleTapMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
     };
 
-    const handleTouchMove = (e: TouchEvent | MouseEvent) => {
-      // Don't prevent default if clicking on a button
+    const handleClick = (e: MouseEvent) => {
+      // Only handle click if we're playing and not clicking a button
       const target = e.target as HTMLElement;
-      if (target.closest('button')) {
-        return;
+      if (target.closest('button') || target.closest('.share-container') || target.closest('.game-start') || target.closest('.game-over')) {
+        return; // Let buttons handle their own events
       }
       
-      e.preventDefault();
-      const rect = gameContainer.getBoundingClientRect();
-      if (!rect) return;
-
-      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
-
-      setTouchTarget({ x, y });
+      handleTapMove(e.clientX, e.clientY);
     };
 
-    const handleTouchEnd = () => {
-      setIsTouchHeld(false);
-      setIsMoving(false);
-      setTimeout(() => {
-        setTouchTarget(null);
-        setRippleCount(0);
-      }, 1200); // Keep showing effects for a bit after release
-    };
-
-    // Mouse events
-    gameContainer.addEventListener('mousedown', handleTouchStart);
-    document.addEventListener('mousemove', handleTouchMove);
-    document.addEventListener('mouseup', handleTouchEnd);
-
-    // Touch events
-    gameContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
-    gameContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-    gameContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
-
-    return () => {
-      gameContainer.removeEventListener('mousedown', handleTouchStart);
-      document.removeEventListener('mousemove', handleTouchMove);
-      document.removeEventListener('mouseup', handleTouchEnd);
-      gameContainer.removeEventListener('touchstart', handleTouchStart);
-      gameContainer.removeEventListener('touchmove', handleTouchMove);
-      gameContainer.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, []);
-
-  // Handle continuous ripple generation when touch is held
-  useEffect(() => {
-    let rippleInterval: NodeJS.Timeout | null = null;
-    
-    if (isTouchHeld) {
-      rippleInterval = setInterval(() => {
-        setRippleCount(prev => prev + 1);
-      }, 300);
+    // Only add touch listeners when actively playing
+    if (gameState.isPlaying) {
+      gameContainer.addEventListener('touchstart', handleTouch, { passive: false });
+      gameContainer.addEventListener('touchmove', handleTouch, { passive: false });
+      gameContainer.addEventListener('click', handleClick);
     }
 
     return () => {
-      if (rippleInterval) {
-        clearInterval(rippleInterval);
-      }
+      gameContainer.removeEventListener('touchstart', handleTouch);
+      gameContainer.removeEventListener('touchmove', handleTouch);
+      gameContainer.removeEventListener('click', handleClick);
     };
-  }, [isTouchHeld]);
+  }, [gameState.isPlaying, getGameDimensions]);
 
-  // Create wireframe grid effect
-  const createWireframeGrid = useCallback(() => {
-    const gameContainer = gameRef.current;
-    const containerWidth = gameContainer?.clientWidth || 800;
-    const containerHeight = gameContainer?.clientHeight || 600;
-    
-    const newGrid = {
-      id: `wireframe-${wireframeCounter.current++}`,
-      x: Math.random() * containerWidth,
-      y: Math.random() * containerHeight,
-      size: 20 + Math.random() * 40,
-      opacity: 0.1 + Math.random() * 0.3,
-      pulse: Math.random() * 2 * Math.PI
-    };
-    
-    setWireframeGrid(prev => [...prev, newGrid]);
-    
-    // Remove old grids after 5 seconds
-    setTimeout(() => {
-      setWireframeGrid(prev => prev.filter(grid => grid.id !== newGrid.id));
-    }, 5000);
-  }, []);
-
-  // Create electricity nodes
-  const createElectricityNodes = useCallback(() => {
-    const nodeCount = 3 + Math.floor(Math.random() * 3);
-    const nodes: Array<{id: string, x: number, y: number, connections: string[], pulse: number}> = [];
-    
-    for (let i = 0; i < nodeCount; i++) {
-      const node = {
-        id: `electricity-${electricityCounter.current++}`,
-        x: Math.random() * 800,
-        y: Math.random() * 600,
-        connections: [] as string[],
-        pulse: Math.random() * 2 * Math.PI
-      };
-      nodes.push(node);
-    }
-    
-    // Create connections between nodes
-    nodes.forEach((node, index) => {
-      if (index < nodes.length - 1) {
-        node.connections.push(nodes[index + 1].id);
-      }
-    });
-    
-    setElectricityNodes(prev => [...prev, ...nodes]);
-    
-    // Remove nodes after animation
-    setTimeout(() => {
-      setElectricityNodes(prev => prev.filter(node => !nodes.find(n => n.id === node.id)));
-    }, 4000);
-  }, []);
-
-  // Generate wireframe and electricity effects periodically
-  useEffect(() => {
-    const wireframeInterval = setInterval(() => {
-      if (gameState.isPlaying) {
-        createWireframeGrid();
-      }
-    }, 1000);
-
-    const electricityInterval = setInterval(() => {
-      if (gameState.isPlaying) {
-        createElectricityNodes();
-      }
-    }, 2000);
-
-    return () => {
-      clearInterval(wireframeInterval);
-      clearInterval(electricityInterval);
-    };
-  }, [gameState.isPlaying, createWireframeGrid, createElectricityNodes]);
-
-  // Handle keyboard input
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!gameState.isPlaying || gameState.isPaused) return;
-      
-      // Get current container dimensions for dynamic boundaries
-      const gameContainer = gameRef.current;
-      const containerHeight = gameContainer?.clientHeight || 600;
-      
-      switch (e.key) {
-        case 'ArrowUp':
-        case 'w':
-        case 'W':
-          setStremeinu(prev => ({ 
-            ...prev, 
-            y: Math.max(25, prev.y - 50) 
-          }));
-          break;
-        case 'ArrowDown':
-        case 's':
-        case 'S':
-          setStremeinu(prev => ({ 
-            ...prev, 
-            y: Math.min(containerHeight - 85, prev.y + 50) 
-          }));
-          break;
-        case ' ':
-          e.preventDefault();
-          setGameState(prev => ({ ...prev, isPaused: !prev.isPaused }));
-          break;
-        case 'r':
-        case 'R':
-          if (gameState.gameOver) {
-            startGame();
-          }
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState.isPlaying, gameState.isPaused, gameState.gameOver, startGame]);
-
-  // Handle Stremeinu movement towards touch target
-  useEffect(() => {
-    if (!gameState.isPlaying || gameState.isPaused || !touchTarget || !isMoving) return;
-
-    const moveInterval = setInterval(() => {
-      setStremeinu(prev => {
-        // Get current container dimensions for dynamic boundaries
-        const gameContainer = gameRef.current;
-        const containerWidth = gameContainer?.clientWidth || 800;
-        const containerHeight = gameContainer?.clientHeight || 600;
-        
-        const dx = touchTarget.x - prev.x;
-        const dy = touchTarget.y - prev.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance < 10) {
-          // Close enough to target, stop moving
-          return prev;
-        }
-        
-        const moveSpeed = 8;
-        const moveY = (dy / distance) * moveSpeed;
-        
-        // Restrict movement to vertical only - keep character within lane
-        const laneLeft = (containerWidth - LANE_WIDTH) / 2;
-        const centerX = laneLeft + (LANE_WIDTH - 60) / 2; // 60 = character width
-        const minY = 25;
-        const maxY = containerHeight - 85; // Account for character height (60px) + padding
-        
-        const newX = centerX; // Keep character horizontally centered
-        const newY = Math.max(minY, Math.min(maxY, prev.y + moveY));
-        
-        // Debug logging for vertical-only movement
-        if (newY !== prev.y + moveY) {
-          console.log('🎮 Character vertical boundary correction:', {
-            oldPos: { x: prev.x, y: prev.y },
-            attemptedMoveY: prev.y + moveY,
-            newPos: { x: newX, y: newY },
-            boundaries: { minY, maxY },
-            containerSize: { width: containerWidth, height: containerHeight }
-          });
-        }
-        
-        return {
-          x: newX,
-          y: newY
-        };
-      });
-    }, 16); // ~60 FPS
-
-    return () => clearInterval(moveInterval);
-  }, [gameState.isPlaying, gameState.isPaused, touchTarget, isMoving]);
-
-  // Game loop
-  useEffect(() => {
-    if (!gameState.isPlaying || gameState.isPaused) {
+  // Spawn tokens
+  const spawnToken = useCallback(() => {
+    if (availableTokens.length === 0) {
+      console.log('⏳ No tokens available yet, skipping spawn');
       return;
     }
 
+    const { width, height } = getGameDimensions();
+    const selectedToken = tokenService.getRandomToken(availableTokens);
+    
+    const newToken: GameObject = {
+      id: `token-${tokenCounter.current++}`,
+      x: Math.random() * (width - TOKEN_SIZE),
+      y: height, // Start from bottom
+      speed: 2 + Math.random() * 2, // Random speed between 2-4
+      token: selectedToken,
+    };
+
+    setTokens(prev => [...prev, newToken]);
+    console.log('🪙 Spawned token:', selectedToken.symbol, '- Market Cap:', selectedToken.marketData.marketCap);
+  }, [availableTokens, getGameDimensions]);
+
+  // Check collision between character and token
+  const checkCollision = useCallback((char: CharacterPosition, token: GameObject) => {
+    return (
+      char.x < token.x + TOKEN_SIZE &&
+      char.x + CHARACTER_SIZE > token.x &&
+      char.y < token.y + TOKEN_SIZE &&
+      char.y + CHARACTER_SIZE > token.y
+    );
+  }, []);
+
+  // Game loop
+  useEffect(() => {
+    if (!gameState.isPlaying) return;
+
     const gameLoop = (timestamp: number) => {
-      // Get current container dimensions
-      const gameContainer = gameRef.current;
-      const containerWidth = gameContainer?.clientWidth || 800;
-      const containerHeight = gameContainer?.clientHeight || 600;
-      
-      // Debug logging
-      if (timestamp % 1000 < 16) { // Log roughly once per second
-        console.log('🎮 Game loop running:', {
-          isPlaying: gameState.isPlaying,
-          containerWidth,
-          containerHeight,
-          stremeinu,
-          obstaclesCount: obstacles.length,
-          particlesCount: particles.length
-        });
-      }
-      
-      // Update river flow
-      setRiverFlow(prev => (prev + 1) % 360);
-      
-      // Spawn particles
-      if (timestamp - lastParticleTime.current > 100) {
-        setParticles(prev => {
-          const newParticle = {
-            id: timestamp,
-            x: Math.random() * containerWidth,
-            y: containerHeight,
-            speed: 2 + Math.random() * 3
-          };
-          return [...prev.slice(-19), newParticle];
-        });
-        lastParticleTime.current = timestamp;
-      }
-      
-      // Spawn new obstacles only if tokens are available
-      if (timestamp - lastObstacleTime.current > obstacleSpawnInterval && trendingTokens.length > 0) {
-        // Spawn tokens in center column only (vertical gameplay)
-        const laneLeft = (containerWidth - LANE_WIDTH) / 2;
-        const centerX = laneLeft + (LANE_WIDTH - 60) / 2; // 60 = token width
+      // Smooth character movement toward target
+      setCharacter(prev => {
+        const deltaX = targetPosition.x - prev.x;
+        const deltaY = targetPosition.y - prev.y;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         
-        const newObstacle: GameObject = {
-          id: `obstacle-${obstacleCounter.current++}`,
-          x: centerX, // Spawn in center column only
-          y: containerHeight, // Start from bottom
-          width: 60,
-          height: 60,
-          speed: baseSpeed + (gameState.level * 0.5),
-          token: trendingTokens[Math.floor(Math.random() * trendingTokens.length)],
-          rotation: Math.random() * 360,
-          scale: 0.8 + Math.random() * 0.4,
-        };
-        setObstacles(prev => [...prev, newObstacle]);
-        lastObstacleTime.current = timestamp;
+        if (distance < 2) {
+          return targetPosition;
+        }
+        
+        // Smooth swimming movement with adaptive speed
+        const speed = Math.min(distance * 0.12, 6);
+        const moveX = prev.x + (deltaX / distance) * speed;
+        const moveY = prev.y + (deltaY / distance) * speed;
+        
+        return { x: moveX, y: moveY };
+      });
+
+      // Spawn tokens periodically
+      if (timestamp - lastTokenSpawn.current > 2000) { // Every 2 seconds
+        spawnToken();
+        lastTokenSpawn.current = timestamp;
       }
 
-      // Update obstacles
-      setObstacles(prev => {
-        const updated = prev
-          .map(obstacle => ({
-            ...obstacle,
-            y: obstacle.y - obstacle.speed,
-            rotation: obstacle.rotation + 1,
+      // Update tokens
+      setTokens(prevTokens => {
+        const updatedTokens = prevTokens
+          .map(token => ({
+            ...token,
+            y: token.y - token.speed, // Move upward
           }))
-          .filter(obstacle => {
-            // Count missed tokens (tokens that go off-screen without being collected)
-            if (obstacle.y < -60 && !obstacle.isCollected) {
+          .filter(token => {
+            // Remove tokens that went off screen
+            if (token.y < -TOKEN_SIZE) {
               setGameState(prev => ({
                 ...prev,
-                missedTokens: prev.missedTokens + 1
+                missedTokens: prev.missedTokens + 1,
               }));
-              return false; // Remove from game
+              console.log('🎮 Token missed:', token.token.symbol);
+              return false;
             }
-            return obstacle.y > -60; // Keep tokens that are still on screen
+            return true;
           });
 
         // Check collisions
-        updated.forEach(obstacle => {
-          if (
-            !obstacle.isCollected &&
-            stremeinu.x < obstacle.x + obstacle.width &&
-            stremeinu.x + 60 > obstacle.x &&
-            stremeinu.y < obstacle.y + obstacle.height &&
-            stremeinu.y + 60 > obstacle.y
-          ) {
-            // Collision detected - collect token if it exists
-            if (obstacle.token) {
-              collectToken(obstacle.token, obstacle.x, obstacle.y);
-              obstacle.isCollected = true; // Mark as collected
-            }
+        updatedTokens.forEach((token, index) => {
+          if (checkCollision(character, token)) {
+            const tokenValue = tokenService.getTokenValue(token.token);
+            console.log('🪙 Token collected:', token.token.symbol, `(${tokenValue} points, MC: ${token.token.marketData.marketCap})`);
+            
+            // Update game state
+            setGameState(prev => ({
+              ...prev,
+              tokensCollected: prev.tokensCollected + 1,
+              score: prev.score + tokenValue,
+            }));
+
+            // Track token collection stats
+            setTokenStats(prev => ({
+              ...prev,
+              [token.token.symbol]: {
+                count: (prev[token.token.symbol]?.count || 0) + 1,
+                totalValue: (prev[token.token.symbol]?.totalValue || 0) + tokenValue,
+                name: token.token.name,
+                img_url: token.token.img_url,
+              }
+            }));
+
+            // Show collection popup with delay for better sync
+            setTimeout(() => {
+              const popup: CollectedTokenPopup = {
+                id: `popup-${Date.now()}-${Math.random()}`,
+                token: token.token,
+                value: tokenValue,
+                x: token.x + TOKEN_SIZE / 2,
+                y: token.y + TOKEN_SIZE / 2,
+              };
+              setCollectedTokenPopups(prev => [...prev, popup]);
+            }, 150); // 150ms delay for better visual sync
+
+            // Remove collected token
+            updatedTokens.splice(index, 1);
           }
         });
 
-        return updated.filter(obstacle => !obstacle.isCollected); // Remove collected obstacles
+        return updatedTokens;
       });
-
-      // Update particles
-      setParticles(prev => 
-        prev
-          .map(particle => ({
-            ...particle,
-            y: particle.y - particle.speed,
-          }))
-          .filter(particle => particle.y > -20)
-      );
 
       // Update score
       setGameState(prev => ({
         ...prev,
-        score: prev.score + 1,
+        score: prev.score + 1, // Continuous score increase
       }));
 
-      // Check game over with countdown
-      if (gameState.lives <= 0) {
-        setGameState(prev => ({
-          ...prev,
-          isPlaying: false,
-          gameOver: true,
-        }));
-        return;
-      }
+      // Check game over condition
+      setGameState(prev => {
+        if (prev.missedTokens >= 10) {
+          console.log('🎮 Game Over - too many missed tokens');
+          
+          // Submit score to server leaderboard (Farcaster users only)
+          if (user && prev.score > 0) {
+            // Calculate favorite token
+            const favoriteTokenSymbol = Object.entries(tokenStats).reduce((max, [symbol, stats]) => 
+              stats.count > (tokenStats[max]?.count || 0) ? symbol : max, 
+              Object.keys(tokenStats)[0]
+            );
+            const favoriteToken = favoriteTokenSymbol ? {
+              symbol: favoriteTokenSymbol,
+              name: tokenStats[favoriteTokenSymbol].name,
+              count: tokenStats[favoriteTokenSymbol].count,
+              img_url: tokenStats[favoriteTokenSymbol].img_url,
+            } : undefined;
 
-      // Handle missed tokens countdown
-      if (gameState.missedTokens >= 6) {
-        if (countdown === null) {
-          setCountdown(3);
-        } else if (countdown > 0) {
-          // Continue countdown
-          if (timestamp - lastCountdownTime.current > 1000) {
-            setCountdown(prev => prev! - 1);
-            lastCountdownTime.current = timestamp;
+            serverLeaderboardService.submitScore({
+              fid: user.fid,
+              username: user.username,
+              displayName: user.displayName,
+              pfpUrl: user.pfpUrl,
+              score: prev.score,
+              tokensCollected: prev.tokensCollected,
+              level: prev.level,
+              favoriteToken,
+              tokenStats,
+            }).then(leaderboardEntry => {
+              console.log('🏆 Score submitted to server:', leaderboardEntry);
+            }).catch(error => {
+              console.error('❌ Failed to submit score:', error);
+              if (error.message.includes('Only Farcaster users')) {
+                console.log('ℹ️ Demo users cannot submit to leaderboard - connect with real Farcaster account');
+              }
+            });
           }
-        } else {
-          // Countdown finished - game over
-          setGameState(prev => ({
+          
+          return {
             ...prev,
             isPlaying: false,
             gameOver: true,
-          }));
-          setCountdown(null);
-          return;
+          };
         }
-      } else {
-        // Reset countdown if missed tokens go below 6
-        setCountdown(null);
-      }
+        return prev;
+      });
 
-      // Level up every 1000 points
-      if (gameState.score > 0 && gameState.score % 1000 === 0) {
-        setGameState(prev => ({
-          ...prev,
-          level: prev.level + 1,
-        }));
+      if (gameState.isPlaying) {
+        animationRef.current = requestAnimationFrame(gameLoop);
       }
-
-      animationRef.current = requestAnimationFrame(gameLoop);
     };
 
     animationRef.current = requestAnimationFrame(gameLoop);
@@ -738,464 +409,214 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [gameState.isPlaying, gameState.isPaused, gameState.lives, gameState.score, gameState.level, stremeinu, trendingTokens, collectToken]);
+  }, [gameState.isPlaying, character, targetPosition, spawnToken, checkCollision, getGameDimensions]);
 
-  // Debug log for game loop useEffect
-  useEffect(() => {
-    console.log('🎮 Game loop useEffect triggered:', {
-      isPlaying: gameState.isPlaying,
-      isPaused: gameState.isPaused,
-      lives: gameState.lives,
-      score: gameState.score,
-      level: gameState.level
+  // Start game
+  const startGame = useCallback(() => {
+    console.log('🎮 Starting game...');
+    const centerPos = getCharacterCenterPosition();
+    setCharacter(centerPos);
+    setTargetPosition(centerPos);
+    setTokens([]);
+    setCollectedTokenPopups([]);
+    setTokenStats({});
+    setGameState({
+      isPlaying: true,
+      score: 0,
+      lives: 3,
+      gameOver: false,
+      level: 1,
+      tokensCollected: 0,
+      missedTokens: 0,
     });
-  }, [gameState.isPlaying, gameState.isPaused, gameState.lives, gameState.score, gameState.level]);
+    lastTokenSpawn.current = 0;
+  }, [getCharacterCenterPosition]);
 
-  // Initial token fetch
-  useEffect(() => {
-    fetchTrendingTokens();
-    
-    // Fallback timeout to ensure loading state is cleared
-    const loadingTimeout = setTimeout(() => {
-      console.log('🎮 Loading timeout - clearing loading state');
-      setGameState(prev => ({ ...prev, isLoading: false }));
-    }, 5000); // 5 second timeout
-    
-    return () => clearTimeout(loadingTimeout);
-  }, [fetchTrendingTokens]);
-
-  // Fetch tokens periodically
-  useEffect(() => {
-    const fetchInterval = setInterval(() => {
-      const now = Date.now();
-      if (now - lastTokenFetch.current > 30000) { // Fetch every 30 seconds
-        fetchTrendingTokens();
-        lastTokenFetch.current = now;
-      }
-    }, 5000);
-
-    return () => clearInterval(fetchInterval);
-  }, [fetchTrendingTokens]);
-
-  // Stats update effect - fixed to prevent infinite loop
+  // Update parent stats
   useEffect(() => {
     if (onStatsUpdate) {
-      const totalTokensCollected = Object.values(gameState.collectedTokens).reduce((sum, { count }) => sum + count, 0);
       onStatsUpdate({
-        tokensCollected: totalTokensCollected,
+        tokensCollected: gameState.tokensCollected,
         missedTokens: gameState.missedTokens,
         score: gameState.score,
         lives: gameState.lives,
         level: gameState.level,
       });
     }
-  }, [gameState.collectedTokens, gameState.missedTokens, gameState.score, gameState.lives, gameState.level, onStatsUpdate]);
-
-  // Debug effect for start screen
-  useEffect(() => {
-    if (!gameState.isLoading && !gameState.isPlaying && !gameState.gameOver) {
-      console.log('🎮 Start screen should be visible, gameState:', gameState);
-    }
-  }, [gameState.isLoading, gameState.isPlaying, gameState.gameOver]);
-
-  // Debug effect for game state changes
-  useEffect(() => {
-    console.log('🎮 Game state changed:', {
-      isLoading: gameState.isLoading,
-      isPlaying: gameState.isPlaying,
-      gameOver: gameState.gameOver,
-      score: gameState.score,
-      lives: gameState.lives
-    });
-  }, [gameState.isLoading, gameState.isPlaying, gameState.gameOver, gameState.score, gameState.lives]);
-
-  // Debug effect for game rendering
-  useEffect(() => {
-    if (gameState.isPlaying) {
-      console.log('🎮 Game should be rendering, stremeinu:', stremeinu, 'obstacles:', obstacles.length);
-    }
-  }, [gameState.isPlaying, stremeinu, obstacles.length]);
-
-  // Recenter character and obstacles when the container size changes
-  useEffect(() => {
-    const handleResize = () => {
-      const container = gameRef.current;
-      if (!container) return;
-
-      const width = container.clientWidth;
-
-      const laneLeft = (width - LANE_WIDTH) / 2;
-
-      // Center character horizontally within the lane
-      setStremeinu(prev => ({ ...prev, x: laneLeft + (LANE_WIDTH - 60) / 2 }));
-
-      // Keep all existing obstacles within the lane
-      setObstacles(prev => prev.map(ob => ({
-        ...ob,
-        x: laneLeft + (LANE_WIDTH - ob.width) / 2
-      })));
-    };
-
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [gameState, onStatsUpdate]);
 
   return (
     <div className="streme-game">
       <div className="game-container" ref={gameRef}>
-        {/* Visual boundaries for the vertical lane */}
-        <div className="vertical-boundaries" aria-hidden="true">
-          <div className="boundary-line left" />
-          <div className="boundary-line right" />
-        </div>
-        {/* Loading Screen */}
-        {gameState.isLoading && (
-          <div className="game-loading">
-            <div className="loading-content">
-              <div className="loading-logo">
-                <img src="/stremeinu.png" alt="Stremeinu" />
-              </div>
-              <h3>🌊 Loading StremeINU's SuperFluid River</h3>
-              <div className="loading-spinner">
-                <div className="spinner-ring"></div>
-                <div className="spinner-ring"></div>
-                <div className="spinner-ring"></div>
-              </div>
-              <p>Fetching trending tokens...</p>
-            </div>
-          </div>
-        )}
-
-        {!gameState.isLoading && !gameState.isPlaying && !gameState.gameOver && (
+        
+        {/* Start Screen */}
+        {!gameState.isPlaying && !gameState.gameOver && (
           <div className="game-start">
-            <h3>Ready to StremeWiFINU?</h3>
-            <p>Help StremeINU navigate the river of trending tokens!</p>
-            <p>👆 Touch in the direction to move our Inu friend</p>
+            <h3>🌊 SuperInu River</h3>
+            <p>Guide SuperInu to catch streaming SuperFluid tokens!</p>
+            <p>👆 Tap where you want SuperInu to swim</p>
             
-            {/* Show character on start screen */}
-            <div
-              className="stremeinu-character"
-              style={{
-                position: 'relative',
-                margin: '20px auto',
-                display: 'block',
-                zIndex: 5,
-              }}
-            >
+            {tokensLoading && (
+              <div style={{ margin: '12px 0', color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>
+                🔄 Loading SuperFluid tokens...
+              </div>
+            )}
+            
+            {!tokensLoading && availableTokens.length > 0 && (
+              <div style={{ margin: '12px 0', color: 'rgba(255,255,255,0.9)', fontSize: '13px' }}>
+                ✨ {availableTokens.length} SuperFluid tokens ready!
+              </div>
+            )}
+            
+            <div className="preview-character">
               <img 
-                src="/stremeinu.png" 
-                alt="Stremeinu" 
+                src="/superinu.png" 
+                alt="SuperInu Preview" 
+                onLoad={() => console.log('🎮 Preview image loaded')}
                 onError={(e) => {
-                  console.log('Start screen character image failed to load, using fallback');
+                  console.log('🎮 Preview image failed, using fallback');
                   e.currentTarget.style.display = 'none';
-                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  (e.currentTarget.nextElementSibling as HTMLElement)?.classList.remove('hidden');
                 }}
               />
               <div className="character-fallback hidden">🐕</div>
             </div>
             
             <button 
-              onClick={() => {
-                console.log('🎯 Start button clicked!');
-                startGame();
-              }} 
+              onClick={startGame} 
               className="start-button"
+              disabled={tokensLoading}
+              style={tokensLoading ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
             >
-              🎮 Start Adventure
+              {tokensLoading ? '🔄 Loading...' : '🎮 Start Game'}
+            </button>
+            
+            <button onClick={() => setShowLeaderboard(true)} className="start-button" style={{marginTop: '8px', background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)'}}>
+              🏆 Leaderboard
             </button>
           </div>
         )}
 
+        {/* Game Over Screen */}
         {gameState.gameOver && (
           <div className="game-over">
-            <h3>💥 Game Over!</h3>
+            <h3>🎮 Game Over!</h3>
             <p>Final Score: {gameState.score}</p>
-            <p>Level Reached: {gameState.level}</p>
-            <p>Tokens Missed: {gameState.missedTokens}/6</p>
-            
-            {/* Display collected tokens */}
-            {Object.keys(gameState.collectedTokens).length > 0 && (
-              <div className="collected-tokens">
-                <h4>🎯 Tokens Collected ({Object.keys(gameState.collectedTokens).length} unique)</h4>
-                <div className="token-collection-summary">
-                  <span>Total collected: {Object.values(gameState.collectedTokens).reduce((sum, { count }) => sum + count, 0)}</span>
-                </div>
-                <div className="token-collection-list">
-                  {Object.values(gameState.collectedTokens)
-                    .sort((a, b) => b.count - a.count) // Sort by count descending
-                    .map(({ token, count }) => (
-                      <div key={token.id} className="collected-token-item">
-                        <img 
-                          src={token.img_url || '/stremeinu.png'} 
-                          alt={token.name}
-                          onError={(e) => {
-                            e.currentTarget.src = '/stremeinu.png';
-                          }}
-                        />
-                        <div className="token-collection-info">
-                          <span className="token-collection-name">{token.symbol}</span>
-                          <span className="token-collection-count">x{count}</span>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
+            <p>Tokens Collected: {gameState.tokensCollected}</p>
+            <p>Tokens Missed: {gameState.missedTokens}</p>
             
             <button onClick={startGame} className="restart-button">
               🔄 Play Again
             </button>
             
-            {/* Stake Tokens Button */}
-            {Object.keys(gameState.collectedTokens).length > 0 && !isStaking && (
-              <button onClick={handleStakeTokens} className="stake-button">
-                🎰 Stake Streme Tokens to Stream Rewards to Wallet
-              </button>
-            )}
+            <button onClick={() => setShowLeaderboard(true)} className="restart-button" style={{marginTop: '8px', background: 'linear-gradient(135deg, #059669 0%, #10b981 100())'}}>
+              🏆 View Leaderboard
+            </button>
             
-            {/* Share Button */}
             <div className="game-over-share">
-              <ShareButton />
+              <ShareButton 
+                gameData={{
+                  score: gameState.score,
+                  tokensCollected: gameState.tokensCollected,
+                  level: gameState.level,
+                  rank: undefined, // Will be fetched from server
+                }}
+              />
             </div>
           </div>
         )}
 
-        {gameState.isPaused && (
-          <div className="game-paused">
-            <h3>⏸️ Game Paused</h3>
-            <p>Press <strong>Space</strong> to resume</p>
-          </div>
-        )}
-
+        {/* Game Playing */}
         {gameState.isPlaying && (
           <>
             {/* River Background */}
             <div className="river-background">
-              <div 
-                className="river-flow"
-                style={{ 
-                  background: `linear-gradient(${riverFlow}deg, rgba(139, 92, 246, 0.3), rgba(168, 85, 247, 0.3))` 
-                }}
-              />
-              <div 
-                className="river-flow river-flow-2"
-                style={{ 
-                  background: `linear-gradient(${riverFlow + 45}deg, rgba(139, 92, 246, 0.2), rgba(168, 85, 247, 0.2))` 
-                }}
-              />
+              <div className="river-flow"></div>
             </div>
-            
-            {/* Spawn Area Indicator */}
-            <div className="spawn-area-indicator">
-              <div className="spawn-area-line spawn-area-left"></div>
-              <div className="spawn-area-line spawn-area-right"></div>
-            </div>
-            
-            {/* Wireframe Grid Effects */}
-            {wireframeGrid.map(grid => (
-              <div
-                key={grid.id}
-                className="wireframe-grid"
-                style={{
-                  left: `${grid.x}px`,
-                  top: `${grid.y}px`,
-                  width: `${grid.size}px`,
-                  height: `${grid.size}px`,
-                  opacity: grid.opacity,
-                  '--pulse': grid.pulse,
-                } as React.CSSProperties}
-              />
-            ))}
-            
-            {/* Electricity Nodes and Connections */}
-            {electricityNodes.map(node => (
-              <div
-                key={node.id}
-                className="electricity-node"
-                style={{
-                  left: `${node.x}px`,
-                  top: `${node.y}px`,
-                  '--pulse': node.pulse,
-                } as React.CSSProperties}
-              >
-                {node.connections.map(connectionId => {
-                  const connectedNode = electricityNodes.find(n => n.id === connectionId);
-                  if (!connectedNode) return null;
-                  
-                  const deltaX = connectedNode.x - node.x;
-                  const deltaY = connectedNode.y - node.y;
-                  const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-                  const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
-                  
-                  return (
-                    <div
-                      key={connectionId}
-                      className="electricity-connection"
-                      style={{
-                        width: `${distance}px`,
-                        transform: `rotate(${angle}deg)`,
-                        '--pulse': node.pulse,
-                      } as React.CSSProperties}
-                    />
-                  );
-                })}
-              </div>
-            ))}
-            
-            {/* Touch Movement Indicator */}
-            {touchTarget && gameState.isPlaying && (
-              <div
-                className="touch-indicator"
-                style={{
-                  left: `${touchTarget.x}px`,
-                  top: `${touchTarget.y}px`,
-                }}
-              >
-                {/* Multiple ripple instances for held effect */}
-                {Array.from({ length: Math.min(rippleCount, 5) }, (_, index) => (
-                  <div key={index} className={`touch-ripple ripple-${(index % 3) + 1}`} 
-                       style={{ animationDelay: `${index * 0.1}s` }}></div>
-                ))}
-                <div className="water-droplet"></div>
-                <div className="touch-glow"></div>
-                <div className="touch-center"></div>
-                
-                {/* Additional held effects */}
-                {isTouchHeld && (
-                  <>
-                    <div className="held-ripple held-1"></div>
-                    <div className="held-ripple held-2"></div>
-                    <div className="held-pulse"></div>
-                  </>
-                )}
-              </div>
-            )}
 
-            {/* Floating Particles */}
-            {particles.map(particle => (
-              <div
-                key={particle.id}
-                className="river-particle"
-                style={{
-                  left: `${particle.x}px`,
-                  top: `${particle.y}px`,
-                }}
-              />
-            ))}
-            
-            {/* Touch to Move Instruction */}
-            <div className="touch-instruction">
-              <p>👆 Touch to move</p>
-            </div>
-            
-            {/* Stremeinu character */}
+            {/* Character */}
             <div
-              className="stremeinu-character"
+              className="superinu-character"
               style={{
-                left: `${stremeinu.x}px`,
-                top: `${stremeinu.y}px`,
+                left: `${character.x}px`,
+                top: `${character.y}px`,
+                width: `${CHARACTER_SIZE}px`,
+                height: `${CHARACTER_SIZE}px`,
               }}
             >
               <img 
-                src="/stremeinu.png" 
-                alt="Stremeinu" 
+                src="/superinu.png" 
+                alt="SuperInu" 
+                onLoad={() => console.log('🎮 Character image loaded')}
                 onError={(e) => {
-                  console.log('Character image failed to load, using fallback');
+                  console.log('🎮 Character image failed, using fallback');
                   e.currentTarget.style.display = 'none';
-                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  (e.currentTarget.nextElementSibling as HTMLElement)?.classList.remove('hidden');
                 }}
               />
               <div className="character-fallback hidden">🐕</div>
             </div>
 
-            {/* Obstacles */}
-            {obstacles.map(obstacle => (
+            {/* Tokens */}
+            {tokens.map(token => (
               <div
-                key={obstacle.id}
-                className="obstacle"
+                key={token.id}
+                className="token-obstacle"
                 style={{
-                  left: `${obstacle.x}px`,
-                  top: `${obstacle.y}px`,
-                  width: `${obstacle.width}px`,
-                  height: `${obstacle.height}px`,
-                  transform: `rotate(${obstacle.rotation}deg) scale(${obstacle.scale})`,
+                  left: `${token.x}px`,
+                  top: `${token.y}px`,
+                  width: `${TOKEN_SIZE}px`,
+                  height: `${TOKEN_SIZE}px`,
                 }}
               >
-                {obstacle.token && (
-                  <div className="token-info">
-                    <img 
-                      src={obstacle.token.img_url || '/stremeinu.png'} 
-                      alt={obstacle.token.name}
-                      onError={(e) => {
-                        e.currentTarget.src = '/stremeinu.png';
-                      }}
-                    />
-                    <div className="token-details">
-                      <span className="token-name">{obstacle.token.symbol}</span>
-                      <span className={`price-change ${obstacle.token.marketData.priceChange24h >= 0 ? 'positive' : 'negative'}`}>
-                        {obstacle.token.marketData.priceChange24h >= 0 ? '📈' : '📉'} 
-                        {Math.abs(obstacle.token.marketData.priceChange24h).toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* Burst Effects */}
-            {burstEffects.map(effect => (
-              <div
-                key={effect.id}
-                className="burst-effect"
-                style={{
-                  left: `${effect.x}px`,
-                  top: `${effect.y}px`,
-                }}
-              >
-                <div className="burst-particles">
-                  {[...Array(8)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="burst-particle"
-                      style={{
-                        '--angle': `${i * 45}deg`,
-                        '--delay': `${i * 0.1}s`,
-                      } as React.CSSProperties}
-                    />
-                  ))}
-                </div>
-                <div className="burst-token">
+                <div className="token-content">
                   <img 
-                    src={effect.token.img_url || '/stremeinu.png'} 
-                    alt={effect.token.name}
+                    src={token.token.img_url} 
+                    alt={token.token.name}
                     onError={(e) => {
-                      e.currentTarget.src = '/stremeinu.png';
+                      e.currentTarget.src = '/superinu.png';
                     }}
                   />
-                  <span className="burst-symbol">+{effect.token.symbol}</span>
+                  <span className="token-symbol">{token.token.symbol}</span>
                 </div>
               </div>
             ))}
 
-            {/* Confetti Effects */}
-            {confetti.map(piece => (
-              <div
-                key={piece.id}
-                className="confetti-piece"
-                style={{
-                  left: `${piece.x}px`,
-                  top: `${piece.y}px`,
-                  transform: `rotate(${piece.rotation}deg)`,
-                  color: piece.color,
+            {/* Game Stats */}
+            <div className="game-stats">
+              <div className="stat">Score: {gameState.score.toLocaleString()}</div>
+              <div className="stat">Tokens: {gameState.tokensCollected}</div>
+              <div className="stat">Missed: {gameState.missedTokens}/10</div>
+            </div>
+
+            {/* Token Collection Popups */}
+            {collectedTokenPopups.map(popup => (
+              <TokenCollectedPopup
+                key={popup.id}
+                token={popup.token}
+                value={popup.value}
+                x={popup.x}
+                y={popup.y}
+                onComplete={() => {
+                  setCollectedTokenPopups(prev => prev.filter(p => p.id !== popup.id));
                 }}
-              >
-                {piece.text}
-              </div>
+              />
             ))}
+
+            {/* Game Instructions */}
+            <div className="game-instructions">
+              <p>🏊‍♂️ Tap to swim • 🪙 Catch SuperFluid tokens • ❌ Don't miss 10!</p>
+            </div>
           </>
         )}
       </div>
+      
+      {/* Leaderboard Modal */}
+      <Leaderboard 
+        isOpen={showLeaderboard}
+        onClose={() => setShowLeaderboard(false)}
+        currentUserScore={gameState.gameOver ? gameState.score : undefined}
+      />
     </div>
   );
-} 
+}

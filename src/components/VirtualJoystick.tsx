@@ -227,7 +227,7 @@ export const VirtualJoystick: React.FC<VirtualJoystickProps> = ({
       
       {/* Instructions */}
       <div className="joystick-instructions">
-        <p>🎮 Drag to move StremeINU</p>
+        <p>🎮 Drag to move SuperInu</p>
       </div>
     </div>
   );

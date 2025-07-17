@@ -7,6 +7,8 @@ interface StremeToken {
   symbol: string;
   img_url: string;
   username: string;
+  contract_address: string;
+  cast_hash: string;
   marketData: {
     price: number;
     priceChange24h: number;
@@ -28,6 +30,7 @@ const TrendingScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   useEffect(() => {
     // Show the panel with animation
@@ -71,6 +74,8 @@ const TrendingScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             symbol: 'STREME',
             img_url: 'https://api.streme.fun/images/streme-icon.png',
             username: 'streme',
+            contract_address: '0x3b3cd21242ba44e9865b066e5ef5d1cc1030cc58',
+            cast_hash: '0x3f100319c64a53f49925c2662eca87b39865f1c8',
             marketData: {
               price: 0.00000025,
               priceChange24h: 5.2,
@@ -96,6 +101,16 @@ const TrendingScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const handleClose = () => {
     setIsVisible(false);
     setTimeout(() => onClose(), 300);
+  };
+
+  const copyToClipboard = async (address: string) => {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopiedAddress(address);
+      setTimeout(() => setCopiedAddress(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy address:', err);
+    }
   };
 
   const formatNumber = (num: number): string => {
@@ -177,6 +192,43 @@ const TrendingScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <span className={`stat-value ${token.marketData.priceChange5m >= 0 ? 'positive' : 'negative'}`}>
               {token.marketData.priceChange5m >= 0 ? '+' : ''}{token.marketData.priceChange5m.toFixed(2)}%
             </span>
+          </div>
+        </div>
+        
+        {/* Contract Address Section */}
+        <div className="contract-section">
+          <div className="contract-header">
+            <span className="contract-label">Contract Address</span>
+            <div className="contract-links">
+              <a 
+                href={`https://streme.fun/token/${token.contract_address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="streme-link"
+                title="View on Streme.fun"
+              >
+                🔗 Streme
+              </a>
+              <a 
+                href={`https://basescan.org/address/${token.contract_address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="explorer-link"
+                title="View on BaseScan"
+              >
+                🔍 Explorer
+              </a>
+            </div>
+          </div>
+          <div className="contract-address-container">
+            <code className="contract-address">{token.contract_address}</code>
+            <button
+              className={`copy-button ${copiedAddress === token.contract_address ? 'copied' : ''}`}
+              onClick={() => copyToClipboard(token.contract_address)}
+              title="Copy contract address"
+            >
+              {copiedAddress === token.contract_address ? '✅' : '📋'}
+            </button>
           </div>
         </div>
       </div>

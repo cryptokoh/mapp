@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { sdk } from '@farcaster/frame-sdk'
 import { StremeGame } from './components/StremeGame'
+
+// Debug: Test if component loads
+console.log('🎮 App.tsx is loading...');
 import { SplashScreen } from './components/SplashScreen'
 import TrendingScreen from './components/TrendingScreen'
 import './App.css'
@@ -77,7 +80,7 @@ function App() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, delay: 0.2 }}
       >
-        <h1>🌊 StremeINU River</h1>
+        <h1>🌊 SuperInu River</h1>
         <button 
           className="trending-button"
           onClick={() => setShowTrending(true)}
