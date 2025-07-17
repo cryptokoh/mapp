@@ -21,7 +21,7 @@ export function ShareButton({ className = '', gameData }: ShareButtonProps) {
     try {
       if (gameData) {
         // Create custom share text for Farcaster
-        const shareText = `I just caught ${gameData.tokensCollected} SuperFluid tokens on @StremeInu's $SuperInu River Adventure! 🌊🐕\n\n🏆 Score: ${gameData.score.toLocaleString()}\n🪙 Tokens: ${gameData.tokensCollected}\n⭐ Level: ${gameData.level}\n\n🎮 Help SuperInu catch streaming tokens in this addictive river game!\n\nBuilt with React + Farcaster SDK 🚀`;
+        const shareText = `I just caught ${gameData.tokensCollected} SuperFluid tokens on @StremeInu's $SuperInu River Adventure! 🌊🐕\n\n🏆 Score: ${gameData.score.toLocaleString()}\n🪙 Tokens: ${gameData.tokensCollected}\n⭐ Level: ${gameData.level}\n\n🎮 Try to catch them here: https://farcaster.xyz/miniapps/UnoOnG81fzr4/stremeinu-superfluid-river`;
         
         await sdk.actions.composeCast({
           text: shareText
@@ -29,7 +29,7 @@ export function ShareButton({ className = '', gameData }: ShareButtonProps) {
       } else {
         // Share general game
         await sdk.actions.composeCast({
-          text: `🌊 Just discovered SuperInu River! 🐕\n\nHelp SuperInu catch streaming SuperFluid tokens in this addictive river adventure! 🪙\n\n🎮 Tap to swim, collect real tokens, beat your high score!\n\nBuilt with React + Farcaster SDK 🚀`
+          text: `🌊 Just discovered SuperInu River! 🐕\n\nHelp SuperInu catch streaming SuperFluid tokens in this addictive river adventure! 🪙\n\n🎮 Try to catch them here: https://farcaster.xyz/miniapps/UnoOnG81fzr4/stremeinu-superfluid-river`
         });
       }
     } catch (error) {
