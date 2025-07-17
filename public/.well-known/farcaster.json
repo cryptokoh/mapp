@@ -7,10 +7,10 @@
   "frame": {
     "version": "1",
     "name": "StremeINU Superfluid River",
-    "iconUrl": "https://fcmapp.netlify.app/icon.svg",
+    "iconUrl": "https://fcmapp.netlify.app/superinu.png",
     "homeUrl": "https://fcmapp.netlify.app",
-    "imageUrl": "https://fcmapp.netlify.app/og-image.svg",
-    "buttonTitle": "🚀 Launch App",
+    "imageUrl": "https://fcmapp.netlify.app/superinu.png",
+    "buttonTitle": "🚀 Streme WIF Inu!",
     "splashImageUrl": "https://fcmapp.netlify.app/splash.svg",
     "splashBackgroundColor": "#000000",
     "subtitle": "Streme'n the Trendiest Tokens ",
