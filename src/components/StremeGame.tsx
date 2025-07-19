@@ -66,17 +66,7 @@ interface CharacterPosition {
   y: number;
 }
 
-interface StremeGameProps {
-  onStatsUpdate?: (stats: {
-    tokensCollected: number;
-    missedTokens: number;
-    score: number;
-    lives: number;
-    level: number;
-  }) => void;
-}
-
-export function StremeGame({ onStatsUpdate }: StremeGameProps) {
+export function StremeGame() {
   console.log('🎮 StremeGame initializing...');
 
   // Farcaster integration
@@ -654,18 +644,7 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
     }, 3000);
   }, [getCharacterCenterPosition]);
 
-  // Update parent stats
-  useEffect(() => {
-    if (onStatsUpdate) {
-      onStatsUpdate({
-        tokensCollected: gameState.tokensCollected,
-        missedTokens: gameState.missedTokens,
-        score: gameState.score,
-        lives: gameState.lives,
-        level: gameState.level,
-      });
-    }
-  }, [gameState, onStatsUpdate]);
+  // Removed unused parent stats update
 
   return (
     <div className="streme-game">

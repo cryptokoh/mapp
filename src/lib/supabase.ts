@@ -12,7 +12,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 // Test the connection
 export async function testSupabaseConnection() {
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('leaderboard')
       .select('count')
       .limit(1)

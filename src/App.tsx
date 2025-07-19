@@ -9,24 +9,11 @@ import { SplashScreen } from './components/SplashScreen'
 import TrendingScreen from './components/TrendingScreen'
 import './App.css'
 
-interface GameStats {
-  tokensCollected: number
-  missedTokens: number
-  score: number
-  lives: number
-  level: number
-}
+// Removed unused GameStats interface
 
 function App() {
   const [showSplash, setShowSplash] = useState(true)
   const [showTrending, setShowTrending] = useState(false)
-  const [gameStats, setGameStats] = useState<GameStats>({
-    tokensCollected: 0,
-    missedTokens: 0,
-    score: 0,
-    lives: 3,
-    level: 1
-  })
 
   useEffect(() => {
     // Get user context
@@ -59,9 +46,7 @@ function App() {
     setShowSplash(false)
   }
 
-  const handleGameStatsUpdate = useCallback((stats: GameStats) => {
-    setGameStats(stats)
-  }, [])
+  // Removed unused handleGameStatsUpdate callback
 
   if (showSplash) {
     return <SplashScreen onComplete={handleCloseSplash} />
@@ -100,7 +85,7 @@ function App() {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.6 }}
           >
-            <StremeGame onStatsUpdate={handleGameStatsUpdate} />
+            <StremeGame />
           </motion.div>
         </div>
       </main>
