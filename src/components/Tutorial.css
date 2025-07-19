@@ -10,6 +10,9 @@
   z-index: 2000;
   pointer-events: none;
   overflow: hidden; /* Prevent content from escaping */
+  display: flex;
+  flex-direction: column;
+  max-width: 424px; /* Ensure it doesn't exceed game width */
 }
 
 /* Dark backdrop with cutout */
@@ -83,12 +86,12 @@
   }
 }
 
-/* Tutorial message - constrained to game area */
+/* Tutorial message - positioned at top of game area */
 .tutorial-message {
   position: absolute;
-  top: 50%; /* Center vertically */
+  top: 20px; /* Position at top with padding */
   left: 50%;
-  transform: translate(-50%, -50%); /* Center the message */
+  transform: translateX(-50%); /* Center horizontally only */
   background: linear-gradient(135deg, 
     rgba(8, 51, 68, 0.98) 0%,
     rgba(14, 116, 144, 0.95) 100%
@@ -97,13 +100,14 @@
   border: 2px solid rgba(103, 232, 249, 0.4);
   border-radius: 20px;
   padding: 20px;
-  max-width: 340px; /* Fixed width that fits within 424px container */
+  max-width: 380px; /* Slightly smaller than 424px to ensure padding */
   width: calc(100% - 40px); /* Responsive width with padding */
   box-shadow: 
     0 20px 40px rgba(0, 0, 0, 0.4),
     0 0 40px rgba(103, 232, 249, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   pointer-events: auto;
+  z-index: 2001; /* Ensure it's above other elements */
 }
 
 /* Tutorial content */
@@ -230,8 +234,9 @@
 /* Mobile responsive - but still constrained to 424px game area */
 @media (max-width: 480px) {
   .tutorial-message {
+    top: 15px; /* Slightly less padding on mobile */
     padding: 16px;
-    max-width: 320px;
+    max-width: calc(100% - 30px); /* Smaller padding on mobile */
   }
 
   .tutorial-content h3 {
