@@ -19,7 +19,7 @@ interface TutorialStep {
 interface TutorialProps {
   isOpen: boolean;
   onComplete: () => void;
-  gameContainerRef?: React.RefObject<HTMLDivElement>;
+  gameContainerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 const tutorialSteps: TutorialStep[] = [
