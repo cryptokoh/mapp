@@ -92,34 +92,7 @@ function App() {
       
       <main className="app-main">
         <div className="game-container">
-          {/* Overlay Counters */}
-          <motion.div 
-            className="counters-overlay"
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-          >
-            <div className="counter">
-              <span className="counter-icon">💰</span>
-              <span className="counter-value">{gameStats.tokensCollected}</span>
-            </div>
-            <div className="counter">
-              <span className="counter-icon">💎</span>
-              <span className="counter-value">{gameStats.score}</span>
-            </div>
-            <div className="counter">
-              <span className="counter-icon">❤️</span>
-              <span className="counter-value">{gameStats.lives}</span>
-            </div>
-            <div className="counter">
-              <span className="counter-icon">⭐</span>
-              <span className="counter-value">{gameStats.level}</span>
-            </div>
-            <div className="counter">
-              <span className="counter-icon">❌</span>
-              <span className="counter-value">{gameStats.missedTokens}/6</span>
-            </div>
-          </motion.div>
+          {/* Removed redundant overlay counters - all stats are shown in the game UI */}
 
           {/* Game Component */}
           <motion.div

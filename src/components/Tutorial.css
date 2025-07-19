@@ -1,0 +1,271 @@
+/* Tutorial Overlay */
+.tutorial-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 424px;
+  z-index: 2000;
+  pointer-events: none;
+  margin: 0 auto;
+}
+
+/* Dark backdrop with cutout */
+.tutorial-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  pointer-events: auto;
+}
+
+/* Highlight area */
+.tutorial-highlight {
+  position: absolute;
+  box-shadow: 
+    0 0 0 9999px rgba(0, 0, 0, 0.85),
+    inset 0 0 20px rgba(103, 232, 249, 0.5);
+  border: 3px solid rgba(103, 232, 249, 0.8);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Pulsing effect for highlights */
+.highlight-pulse {
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  border: 3px solid rgba(103, 232, 249, 0.6);
+  border-radius: inherit;
+  animation: tutorialPulse 2s ease-in-out infinite;
+}
+
+@keyframes tutorialPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+/* Tap indicator */
+.tap-here-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(103, 232, 249, 0.9);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 700;
+  animation: tapBounce 1.5s ease-in-out infinite;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(103, 232, 249, 0.4);
+}
+
+@keyframes tapBounce {
+  0%, 100% {
+    transform: translate(-50%, -50%) translateY(0);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateY(-10px);
+  }
+}
+
+/* Tutorial message - constrained to game area */
+.tutorial-message {
+  position: absolute;
+  bottom: 100px; /* Moved up to ensure it's visible in the game area */
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, 
+    rgba(8, 51, 68, 0.98) 0%,
+    rgba(14, 116, 144, 0.95) 100%
+  );
+  backdrop-filter: blur(20px);
+  border: 2px solid rgba(103, 232, 249, 0.4);
+  border-radius: 20px;
+  padding: 20px;
+  max-width: 340px; /* Reduced to fit within 424px container */
+  width: 85%;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(103, 232, 249, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  pointer-events: auto;
+}
+
+/* Tutorial content */
+.tutorial-content {
+  text-align: center;
+  color: white;
+}
+
+.tutorial-content h3 {
+  margin: 0 0 12px 0;
+  font-size: 20px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #67e8f9, #22d3ee);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 2px 8px rgba(103, 232, 249, 0.3);
+}
+
+.tutorial-content p {
+  margin: 0 0 20px 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Progress dots */
+.tutorial-progress {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 20px 0;
+}
+
+.progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(103, 232, 249, 0.3);
+  transition: all 0.3s ease;
+}
+
+.progress-dot.active {
+  background: #67e8f9;
+  transform: scale(1.3);
+  box-shadow: 0 0 10px rgba(103, 232, 249, 0.6);
+}
+
+/* Tutorial actions */
+.tutorial-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Tutorial buttons */
+.tutorial-button {
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.3px;
+}
+
+.tutorial-button.primary {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  color: white;
+  box-shadow: 
+    0 4px 15px rgba(103, 232, 249, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.tutorial-button.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 6px 20px rgba(103, 232, 249, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
+}
+
+.tutorial-button.primary:active {
+  transform: translateY(0);
+}
+
+.tutorial-button.primary.large {
+  padding: 16px 32px;
+  font-size: 16px;
+}
+
+.tutorial-button.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.tutorial-button.secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* Interaction feedback */
+.interaction-feedback {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 20px;
+  font-size: 18px;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+  pointer-events: none;
+}
+
+/* Mobile responsive - but still constrained to 424px game area */
+@media (max-width: 480px) {
+  .tutorial-message {
+    bottom: 80px; /* Ensure visibility within game bounds */
+    padding: 16px;
+    max-width: 320px;
+  }
+
+  .tutorial-content h3 {
+    font-size: 18px;
+  }
+
+  .tutorial-content p {
+    font-size: 14px;
+  }
+
+  .tutorial-button {
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+
+  .tutorial-button.primary.large {
+    padding: 14px 28px;
+    font-size: 15px;
+  }
+}
+
+/* Ensure tutorial backdrop is contained within game area */
+.streme-game {
+  position: relative;
+}
+
+/* Override any fixed positioning that might escape the container */
+.streme-game .tutorial-overlay {
+  position: absolute !important;
+  width: 100% !important;
+  max-width: 424px !important;
+  height: 100% !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+}

@@ -6,11 +6,15 @@ import { serverLeaderboardService } from '../services/serverLeaderboard';
 import { useFarcaster } from '../hooks/useFarcaster';
 import { tokenService, type StremeToken } from '../services/tokenService';
 import { TokenCollectedPopup } from './TokenCollectedPopup';
+import { Tutorial } from './Tutorial';
+import { DonationButton } from './DonationButton';
 
 // Game constants
 const MAX_CONTAINER_WIDTH = 424;
 const CHARACTER_SIZE = 60;
 const TOKEN_SIZE = 50;
+const ROCK_MIN_SIZE = 60;
+const ROCK_MAX_SIZE = 100;
 
 // StremeToken interface is imported from tokenService
 
@@ -38,6 +42,23 @@ interface GameObject {
   y: number;
   speed: number;
   token: StremeToken;
+}
+
+interface TouchRipple {
+  id: string;
+  x: number;
+  y: number;
+  timestamp: number;
+}
+
+interface Rock {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  speed: number;
+  variant: number; // For visual variety (1-3)
 }
 
 interface CharacterPosition {
@@ -71,9 +92,16 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
     tokensCollected: 0,
     missedTokens: 0,
   });
+  
+  // Rock warning state
+  const [showRockWarning, setShowRockWarning] = useState(false);
 
   // Leaderboard state
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+
+  // Tutorial state
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
 
   // Character position and movement
   const [character, setCharacter] = useState<CharacterPosition>({ x: 0, y: 0 });
@@ -81,6 +109,10 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
   
   // Game objects
   const [tokens, setTokens] = useState<GameObject[]>([]);
+  const [rocks, setRocks] = useState<Rock[]>([]);
+  
+  // Touch feedback
+  const [touchRipples, setTouchRipples] = useState<TouchRipple[]>([]);
   
   // Available tokens for spawning (fetched from Streme.fun API)
   const [availableTokens, setAvailableTokens] = useState<StremeToken[]>([]);
@@ -88,13 +120,15 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
   
   // Token collection tracking
   const [collectedTokenPopups, setCollectedTokenPopups] = useState<CollectedTokenPopup[]>([]);
-  const [tokenStats, setTokenStats] = useState<Record<string, { count: number; totalValue: number; name: string; img_url: string }>>({});
+  const [tokenStats, setTokenStats] = useState<Record<string, { count: number; totalValue: number; name: string; img_url: string; contract_address: string }>>({});
 
   // Refs
   const gameRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>(0);
   const lastTokenSpawn = useRef<number>(0);
+  const lastRockSpawn = useRef<number>(0);
   const tokenCounter = useRef<number>(0);
+  const rockCounter = useRef<number>(0);
 
   // Calculate container dimensions
   const getGameDimensions = useCallback(() => {
@@ -134,13 +168,21 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
     loadTokens();
   }, []);
 
-  // Initialize character position
+  // Initialize character position and check tutorial
   useEffect(() => {
     const centerPos = getCharacterCenterPosition();
     setCharacter(centerPos);
     setTargetPosition(centerPos);
     console.log('🎮 Character positioned at center:', centerPos);
     console.log('🎮 Available tokens:', availableTokens.length);
+    
+    // Check if user has seen tutorial
+    const tutorialSeen = localStorage.getItem('superinu-tutorial-seen');
+    if (!tutorialSeen) {
+      setHasSeenTutorial(false);
+    } else {
+      setHasSeenTutorial(true);
+    }
   }, [getCharacterCenterPosition, availableTokens.length]);
 
   // Handle window resize
@@ -170,6 +212,20 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
       const tapX = clientX - rect.left;
       const tapY = clientY - rect.top;
       
+      // Add touch ripple effect
+      const ripple: TouchRipple = {
+        id: `ripple-${Date.now()}`,
+        x: tapX,
+        y: tapY,
+        timestamp: Date.now()
+      };
+      setTouchRipples(prev => [...prev, ripple]);
+      
+      // Remove ripple after animation
+      setTimeout(() => {
+        setTouchRipples(prev => prev.filter(r => r.id !== ripple.id));
+      }, 600);
+      
       // Calculate target position (center character on tap point)
       const targetX = tapX - CHARACTER_SIZE / 2;
       const targetY = tapY - CHARACTER_SIZE / 2;
@@ -179,6 +235,11 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
       const clampedY = Math.max(0, Math.min(targetY, height - CHARACTER_SIZE));
       
       setTargetPosition({ x: clampedX, y: clampedY });
+      
+      // Haptic feedback if available
+      if ('vibrate' in navigator && navigator.vibrate) {
+        navigator.vibrate(10);
+      }
     };
 
     const handleTouch = (e: TouchEvent) => {
@@ -240,6 +301,45 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
     console.log('🪙 Spawned token:', selectedToken.symbol, '- Market Cap:', selectedToken.marketData.marketCap);
   }, [availableTokens, getGameDimensions]);
 
+  // Spawn rocks
+  const spawnRock = useCallback(() => {
+    const { width, height } = getGameDimensions();
+    const rockSize = ROCK_MIN_SIZE + Math.random() * (ROCK_MAX_SIZE - ROCK_MIN_SIZE);
+    
+    // Check if there's enough space from other rocks
+    const minDistance = 150; // Minimum distance between rocks
+    let x = Math.random() * (width - rockSize);
+    let attempts = 0;
+    
+    // Try to find a good position that doesn't overlap with existing rocks
+    while (attempts < 10) {
+      let validPosition = true;
+      for (const rock of rocks) {
+        const distance = Math.abs(rock.x - x);
+        if (distance < minDistance && Math.abs(rock.y - height) < 100) {
+          validPosition = false;
+          break;
+        }
+      }
+      if (validPosition) break;
+      x = Math.random() * (width - rockSize);
+      attempts++;
+    }
+    
+    const newRock: Rock = {
+      id: `rock-${rockCounter.current++}`,
+      x: x,
+      y: height + rockSize, // Start from bottom
+      width: rockSize,
+      height: rockSize * 0.8, // Slightly flattened
+      speed: 1.5 + Math.random() * 1.5, // Slower than tokens
+      variant: Math.floor(Math.random() * 3) + 1, // 1-3 for visual variety
+    };
+
+    setRocks(prev => [...prev, newRock]);
+    console.log('🪨 Spawned rock:', newRock.id);
+  }, [getGameDimensions, rocks]);
+
   // Check collision between character and token
   const checkCollision = useCallback((char: CharacterPosition, token: GameObject) => {
     return (
@@ -247,6 +347,18 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
       char.x + CHARACTER_SIZE > token.x &&
       char.y < token.y + TOKEN_SIZE &&
       char.y + CHARACTER_SIZE > token.y
+    );
+  }, []);
+
+  // Check collision between character and rock
+  const checkRockCollision = useCallback((char: CharacterPosition, rock: Rock) => {
+    // More forgiving collision for rocks (smaller hit box)
+    const padding = 10; // Make hitbox slightly smaller for better gameplay
+    return (
+      char.x + padding < rock.x + rock.width &&
+      char.x + CHARACTER_SIZE - padding > rock.x &&
+      char.y + padding < rock.y + rock.height &&
+      char.y + CHARACTER_SIZE - padding > rock.y
     );
   }, []);
 
@@ -265,18 +377,34 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
           return targetPosition;
         }
         
-        // Smooth swimming movement with adaptive speed
-        const speed = Math.min(distance * 0.12, 6);
+        // Ultra-fast movement - nearly instant
+        const speed = Math.min(distance * 0.5, 30); // Even faster: 0.5 interpolation, max speed 30
         const moveX = prev.x + (deltaX / distance) * speed;
         const moveY = prev.y + (deltaY / distance) * speed;
+        
+        // If very close, just snap to position
+        if (distance < 10) {
+          return targetPosition;
+        }
         
         return { x: moveX, y: moveY };
       });
 
-      // Spawn tokens periodically
-      if (timestamp - lastTokenSpawn.current > 2000) { // Every 2 seconds
+      // Spawn tokens periodically (wait for rock warning to disappear)
+      if (!showRockWarning && timestamp - lastTokenSpawn.current > 2000) { // Every 2 seconds
         spawnToken();
         lastTokenSpawn.current = timestamp;
+      }
+
+      // Spawn rocks periodically with difficulty progression (wait for rock warning)
+      const rockSpawnInterval = Math.max(2000, 3500 - (gameState.level - 1) * 200); // Gets faster with levels
+      if (!showRockWarning && timestamp - lastRockSpawn.current > rockSpawnInterval) {
+        spawnRock();
+        // Sometimes spawn 2 rocks at higher levels
+        if (gameState.level >= 3 && Math.random() < 0.3) {
+          setTimeout(() => spawnRock(), 300);
+        }
+        lastRockSpawn.current = timestamp;
       }
 
       // Update tokens
@@ -320,20 +448,24 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
                 totalValue: (prev[token.token.symbol]?.totalValue || 0) + tokenValue,
                 name: token.token.name,
                 img_url: token.token.img_url,
+                contract_address: token.token.contract_address,
               }
             }));
 
-            // Show collection popup with delay for better sync
-            setTimeout(() => {
-              const popup: CollectedTokenPopup = {
-                id: `popup-${Date.now()}-${Math.random()}`,
-                token: token.token,
-                value: tokenValue,
-                x: token.x + TOKEN_SIZE / 2,
-                y: token.y + TOKEN_SIZE / 2,
-              };
-              setCollectedTokenPopups(prev => [...prev, popup]);
-            }, 150); // 150ms delay for better visual sync
+            // Show collection popup immediately
+            const popup: CollectedTokenPopup = {
+              id: `popup-${Date.now()}-${Math.random()}`,
+              token: token.token,
+              value: tokenValue,
+              x: token.x + TOKEN_SIZE / 2,
+              y: token.y + TOKEN_SIZE / 2,
+            };
+            setCollectedTokenPopups(prev => [...prev, popup]);
+            
+            // Haptic feedback for collection
+            if ('vibrate' in navigator && navigator.vibrate) {
+              navigator.vibrate(30);
+            }
 
             // Remove collected token
             updatedTokens.splice(index, 1);
@@ -343,11 +475,51 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
         return updatedTokens;
       });
 
-      // Update score
-      setGameState(prev => ({
-        ...prev,
-        score: prev.score + 1, // Continuous score increase
-      }));
+      // Update rocks
+      setRocks(prevRocks => {
+        const updatedRocks = prevRocks
+          .map(rock => ({
+            ...rock,
+            y: rock.y - rock.speed, // Move upward
+          }))
+          .filter(rock => rock.y > -rock.height); // Remove off-screen rocks
+
+        // Check collision with character
+        updatedRocks.forEach(rock => {
+          if (checkRockCollision(character, rock)) {
+            // Rock collision - lose a life or end game
+            setGameState(prev => ({
+              ...prev,
+              lives: prev.lives - 1,
+              missedTokens: prev.missedTokens + 3, // Hitting a rock counts as missing 3 tokens
+            }));
+            
+            // Remove the rock after collision
+            setRocks(current => current.filter(r => r.id !== rock.id));
+            
+            // Haptic feedback for collision
+            if ('vibrate' in navigator && navigator.vibrate) {
+              navigator.vibrate([50, 50, 50]); // Pattern vibration
+            }
+            
+            console.log('💥 Hit a rock!');
+          }
+        });
+
+        return updatedRocks;
+      });
+
+      // Update score and level progression
+      setGameState(prev => {
+        const newScore = prev.score + 1;
+        // Level up every 500 points
+        const newLevel = Math.floor(newScore / 500) + 1;
+        return {
+          ...prev,
+          score: newScore,
+          level: newLevel,
+        };
+      });
 
       // Check game over condition
       setGameState(prev => {
@@ -409,17 +581,26 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [gameState.isPlaying, character, targetPosition, spawnToken, checkCollision, getGameDimensions]);
+  }, [gameState.isPlaying, character, targetPosition, spawnToken, spawnRock, checkCollision, checkRockCollision, getGameDimensions, showRockWarning, tokenStats]);
 
   // Start game
   const startGame = useCallback(() => {
     console.log('🎮 Starting game...');
+    
+    // Show tutorial for first-time players
+    if (!hasSeenTutorial) {
+      setShowTutorial(true);
+      return;
+    }
+    
     const centerPos = getCharacterCenterPosition();
     setCharacter(centerPos);
     setTargetPosition(centerPos);
     setTokens([]);
+    setRocks([]);
     setCollectedTokenPopups([]);
     setTokenStats({});
+    setTouchRipples([]);
     setGameState({
       isPlaying: true,
       score: 0,
@@ -430,6 +611,47 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
       missedTokens: 0,
     });
     lastTokenSpawn.current = 0;
+    lastRockSpawn.current = 0;
+    
+    // Show rock warning for 3 seconds
+    setShowRockWarning(true);
+    setTimeout(() => {
+      setShowRockWarning(false);
+    }, 3000);
+  }, [getCharacterCenterPosition, hasSeenTutorial]);
+
+  // Handle tutorial completion
+  const handleTutorialComplete = useCallback(() => {
+    setShowTutorial(false);
+    setHasSeenTutorial(true);
+    localStorage.setItem('superinu-tutorial-seen', 'true');
+    
+    // Actually start the game
+    const centerPos = getCharacterCenterPosition();
+    setCharacter(centerPos);
+    setTargetPosition(centerPos);
+    setTokens([]);
+    setRocks([]);
+    setCollectedTokenPopups([]);
+    setTokenStats({});
+    setTouchRipples([]);
+    setGameState({
+      isPlaying: true,
+      score: 0,
+      lives: 3,
+      gameOver: false,
+      level: 1,
+      tokensCollected: 0,
+      missedTokens: 0,
+    });
+    lastTokenSpawn.current = 0;
+    lastRockSpawn.current = 0;
+    
+    // Show rock warning for 3 seconds
+    setShowRockWarning(true);
+    setTimeout(() => {
+      setShowRockWarning(false);
+    }, 3000);
   }, [getCharacterCenterPosition]);
 
   // Update parent stats
@@ -505,6 +727,35 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
             <p>Tokens Collected: {gameState.tokensCollected}</p>
             <p>Tokens Missed: {gameState.missedTokens}</p>
             
+            {/* Top Token Collected */}
+            {Object.keys(tokenStats).length > 0 && (() => {
+              const topToken = Object.entries(tokenStats)
+                .sort(([, a], [, b]) => b.count - a.count)[0];
+              if (topToken) {
+                const [symbol, stats] = topToken;
+                return (
+                  <div className="top-token-collected">
+                    <p className="top-token-label">Top Token Collected:</p>
+                    <a 
+                      href={`https://streme.fun/token/${stats.contract_address}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="top-token-link"
+                    >
+                      <div className="top-token-display">
+                        <img src={stats.img_url} alt={stats.name} />
+                        <div className="top-token-info">
+                          <span className="top-token-symbol">{symbol}</span>
+                          <span className="top-token-count">{stats.count}x collected</span>
+                        </div>
+                      </div>
+                    </a>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+            
             <button onClick={startGame} className="restart-button">
               🔄 Play Again
             </button>
@@ -522,6 +773,7 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
                   rank: undefined, // Will be fetched from server
                 }}
               />
+              <DonationButton />
             </div>
           </div>
         )}
@@ -558,35 +810,94 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
             </div>
 
             {/* Tokens */}
-            {tokens.map(token => (
+            {tokens.map(token => {
+              // Check if character is approaching this token
+              const distance = Math.sqrt(
+                Math.pow(character.x + CHARACTER_SIZE/2 - (token.x + TOKEN_SIZE/2), 2) +
+                Math.pow(character.y + CHARACTER_SIZE/2 - (token.y + TOKEN_SIZE/2), 2)
+              );
+              const isApproaching = distance < 100; // Show preview when within 100px
+              const tokenValue = tokenService.getTokenValue(token.token);
+              
+              return (
+                <div
+                  key={token.id}
+                  className={`token-obstacle ${isApproaching ? 'token-approaching' : ''}`}
+                  style={{
+                    left: `${token.x}px`,
+                    top: `${token.y}px`,
+                    width: `${TOKEN_SIZE}px`,
+                    height: `${TOKEN_SIZE}px`,
+                  }}
+                >
+                  {isApproaching && (
+                    <div className="token-value-preview">
+                      +{tokenValue} pts
+                    </div>
+                  )}
+                  <div className="token-content">
+                    <img 
+                      src={token.token.img_url} 
+                      alt={token.token.name}
+                      onError={(e) => {
+                        e.currentTarget.src = '/superinu.png';
+                      }}
+                    />
+                    <span className="token-symbol">{token.token.symbol}</span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Rocks */}
+            {rocks.map(rock => (
               <div
-                key={token.id}
-                className="token-obstacle"
+                key={rock.id}
+                className={`river-rock rock-variant-${rock.variant}`}
                 style={{
-                  left: `${token.x}px`,
-                  top: `${token.y}px`,
-                  width: `${TOKEN_SIZE}px`,
-                  height: `${TOKEN_SIZE}px`,
+                  left: `${rock.x}px`,
+                  top: `${rock.y}px`,
+                  width: `${rock.width}px`,
+                  height: `${rock.height}px`,
                 }}
               >
-                <div className="token-content">
-                  <img 
-                    src={token.token.img_url} 
-                    alt={token.token.name}
-                    onError={(e) => {
-                      e.currentTarget.src = '/superinu.png';
-                    }}
-                  />
-                  <span className="token-symbol">{token.token.symbol}</span>
-                </div>
+                <div className="rock-shadow" />
+                <div className="water-splash" />
               </div>
             ))}
 
-            {/* Game Stats */}
-            <div className="game-stats">
-              <div className="stat">Score: {gameState.score.toLocaleString()}</div>
-              <div className="stat">Tokens: {gameState.tokensCollected}</div>
-              <div className="stat">Missed: {gameState.missedTokens}/10</div>
+            {/* Touch Ripples */}
+            {touchRipples.map(ripple => (
+              <div
+                key={ripple.id}
+                className="touch-indicator"
+                style={{
+                  left: `${ripple.x}px`,
+                  top: `${ripple.y}px`,
+                }}
+              />
+            ))}
+
+            {/* Simplified Game Stats with Danger Indicator */}
+            <div className="game-stats-enhanced">
+              <div className="primary-score">
+                <span className="score-label">SCORE</span>
+                <span className="score-value">{gameState.score.toLocaleString()}</span>
+              </div>
+              <div className="level-indicator">
+                <span className="level-label">LEVEL</span>
+                <span className="level-value">{gameState.level}</span>
+              </div>
+              <div className={`danger-indicator ${gameState.missedTokens >= 7 ? 'danger-zone' : ''}`}>
+                <span className="missed-label">MISSED</span>
+                <span className="missed-count">{gameState.missedTokens}/10</span>
+                <div className="danger-bar">
+                  <div 
+                    className="danger-fill" 
+                    style={{width: `${(gameState.missedTokens/10)*100}%`}}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Token Collection Popups */}
@@ -603,10 +914,34 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
               />
             ))}
 
+            {/* Rock Warning */}
+            {showRockWarning && (
+              <div className="rock-warning">
+                <span className="warning-icon">🪨</span>
+                <span className="warning-text">WATCH OUT FOR ROCKS!</span>
+                <span className="warning-icon">🪨</span>
+              </div>
+            )}
+            
             {/* Game Instructions */}
             <div className="game-instructions">
-              <p>🏊‍♂️ Tap to swim • 🪙 Catch SuperFluid tokens • ❌ Don't miss 10!</p>
+              <p>🏊‍♂️ Tap to swim • 🪙 Catch SuperFluid tokens • 🪨 Avoid rocks • ❌ Don't miss 10!</p>
             </div>
+            
+            {/* End Adventure Button */}
+            <button 
+              className="end-adventure-button"
+              onClick={() => {
+                // End the game gracefully
+                setGameState(prev => ({
+                  ...prev,
+                  isPlaying: false,
+                  gameOver: true,
+                }));
+              }}
+            >
+              🏁 End Adventure
+            </button>
           </>
         )}
       </div>
@@ -616,6 +951,13 @@ export function StremeGame({ onStatsUpdate }: StremeGameProps) {
         isOpen={showLeaderboard}
         onClose={() => setShowLeaderboard(false)}
         currentUserScore={gameState.gameOver ? gameState.score : undefined}
+      />
+      
+      {/* Tutorial */}
+      <Tutorial 
+        isOpen={showTutorial}
+        onComplete={handleTutorialComplete}
+        gameContainerRef={gameRef}
       />
     </div>
   );
