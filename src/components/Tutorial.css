@@ -3,12 +3,13 @@
   position: absolute;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
   height: 100%;
-  max-width: 424px;
   z-index: 2000;
   pointer-events: none;
-  margin: 0 auto;
+  overflow: hidden; /* Prevent content from escaping */
 }
 
 /* Dark backdrop with cutout */
@@ -85,9 +86,10 @@
 /* Tutorial message - constrained to game area */
 .tutorial-message {
   position: absolute;
-  bottom: 100px; /* Moved up to ensure it's visible in the game area */
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 20px; /* Positioned at bottom with padding */
+  left: 20px; /* Add padding from edges */
+  right: 20px; /* Add padding from edges */
+  transform: none; /* Remove transform to prevent positioning issues */
   background: linear-gradient(135deg, 
     rgba(8, 51, 68, 0.98) 0%,
     rgba(14, 116, 144, 0.95) 100%
@@ -96,13 +98,13 @@
   border: 2px solid rgba(103, 232, 249, 0.4);
   border-radius: 20px;
   padding: 20px;
-  max-width: 340px; /* Reduced to fit within 424px container */
-  width: 85%;
+  max-width: calc(100% - 40px); /* Account for left/right padding */
   box-shadow: 
     0 20px 40px rgba(0, 0, 0, 0.4),
     0 0 40px rgba(103, 232, 249, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   pointer-events: auto;
+  margin: 0 auto; /* Center horizontally */
 }
 
 /* Tutorial content */
@@ -229,9 +231,11 @@
 /* Mobile responsive - but still constrained to 424px game area */
 @media (max-width: 480px) {
   .tutorial-message {
-    bottom: 80px; /* Ensure visibility within game bounds */
+    bottom: 15px; /* Slightly less padding on mobile */
     padding: 16px;
-    max-width: 320px;
+    left: 15px;
+    right: 15px;
+    max-width: calc(100% - 30px);
   }
 
   .tutorial-content h3 {
@@ -256,16 +260,4 @@
 /* Ensure tutorial backdrop is contained within game area */
 .streme-game {
   position: relative;
-}
-
-/* Override any fixed positioning that might escape the container */
-.streme-game .tutorial-overlay {
-  position: absolute !important;
-  width: 100% !important;
-  max-width: 424px !important;
-  height: 100% !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
 }
