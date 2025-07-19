@@ -86,10 +86,9 @@
 /* Tutorial message - constrained to game area */
 .tutorial-message {
   position: absolute;
-  bottom: 20px; /* Positioned at bottom with padding */
-  left: 20px; /* Add padding from edges */
-  right: 20px; /* Add padding from edges */
-  transform: none; /* Remove transform to prevent positioning issues */
+  top: 50%; /* Center vertically */
+  left: 50%;
+  transform: translate(-50%, -50%); /* Center the message */
   background: linear-gradient(135deg, 
     rgba(8, 51, 68, 0.98) 0%,
     rgba(14, 116, 144, 0.95) 100%
@@ -98,13 +97,13 @@
   border: 2px solid rgba(103, 232, 249, 0.4);
   border-radius: 20px;
   padding: 20px;
-  max-width: calc(100% - 40px); /* Account for left/right padding */
+  max-width: 340px; /* Fixed width that fits within 424px container */
+  width: calc(100% - 40px); /* Responsive width with padding */
   box-shadow: 
     0 20px 40px rgba(0, 0, 0, 0.4),
     0 0 40px rgba(103, 232, 249, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   pointer-events: auto;
-  margin: 0 auto; /* Center horizontally */
 }
 
 /* Tutorial content */
@@ -231,11 +230,8 @@
 /* Mobile responsive - but still constrained to 424px game area */
 @media (max-width: 480px) {
   .tutorial-message {
-    bottom: 15px; /* Slightly less padding on mobile */
     padding: 16px;
-    left: 15px;
-    right: 15px;
-    max-width: calc(100% - 30px);
+    max-width: 320px;
   }
 
   .tutorial-content h3 {

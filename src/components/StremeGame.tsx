@@ -923,6 +923,13 @@ export function StremeGame() {
             </button>
           </>
         )}
+        
+        {/* Tutorial - inside game container */}
+        <Tutorial 
+          isOpen={showTutorial}
+          onComplete={handleTutorialComplete}
+          gameContainerRef={gameRef}
+        />
       </div>
       
       {/* Leaderboard Modal */}
@@ -930,13 +937,6 @@ export function StremeGame() {
         isOpen={showLeaderboard}
         onClose={() => setShowLeaderboard(false)}
         currentUserScore={gameState.gameOver ? gameState.score : undefined}
-      />
-      
-      {/* Tutorial */}
-      <Tutorial 
-        isOpen={showTutorial}
-        onComplete={handleTutorialComplete}
-        gameContainerRef={gameRef}
       />
     </div>
   );
