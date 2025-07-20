@@ -1253,10 +1253,10 @@ export function StremeGame() {
             {/* Token Icons Ticker - Outside the box */}
             <div className="token-icons-ticker">
               <div className="token-icons-scroll">
-                {/* Triple the list for seamless scrolling */}
-                {[...availableTokens, ...availableTokens, ...availableTokens].map((token, index) => (
+                {/* First set of tokens */}
+                {availableTokens.map((token, index) => (
                   <img 
-                    key={`${token.symbol}-icon-${index}`} 
+                    key={`${token.symbol}-icon-1-${index}`} 
                     src={token.img_url} 
                     alt={token.symbol} 
                     className="ticker-token-icon"
@@ -1265,6 +1265,29 @@ export function StremeGame() {
                     }}
                   />
                 ))}
+                
+                {/* Promotional text */}
+                <span className="ticker-promo-text">
+                  Trade, stake and stream super tokens on streme.fun now!
+                </span>
+                
+                {/* Second set of tokens */}
+                {availableTokens.map((token, index) => (
+                  <img 
+                    key={`${token.symbol}-icon-2-${index}`} 
+                    src={token.img_url} 
+                    alt={token.symbol} 
+                    className="ticker-token-icon"
+                    onError={(e) => {
+                      e.currentTarget.src = 'https://api.streme.fun/images/streme-icon.png';
+                    }}
+                  />
+                ))}
+                
+                {/* Promotional text again for seamless loop */}
+                <span className="ticker-promo-text">
+                  Trade, stake and stream super tokens on streme.fun now!
+                </span>
               </div>
             </div>
           </>

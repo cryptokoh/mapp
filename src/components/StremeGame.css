@@ -1456,48 +1456,25 @@
 /* Token Icons Ticker */
 .token-icons-ticker {
   position: absolute;
-  top: calc(50% - 200px); /* Position above the centered start box */
+  top: 80px; /* Move to top of screen */
   left: 0;
   right: 0;
   height: 60px;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.2);
-  border-top: 1px solid rgba(34, 211, 238, 0.1);
-  border-bottom: 1px solid rgba(34, 211, 238, 0.1);
   display: flex;
   align-items: center;
   z-index: 1;
 }
 
-/* Gradient fade on edges */
-.token-icons-ticker::before,
-.token-icons-ticker::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 50px;
-  z-index: 2;
-  pointer-events: none;
-}
-
-.token-icons-ticker::before {
-  left: 0;
-  background: linear-gradient(to right, rgba(1, 15, 41, 0.8), transparent);
-}
-
-.token-icons-ticker::after {
-  right: 0;
-  background: linear-gradient(to left, rgba(1, 15, 41, 0.8), transparent);
-}
 
 .token-icons-scroll {
   display: flex;
-  gap: 20px;
-  animation: scroll-right-to-left 40s linear infinite;
+  gap: 40px; /* Increase gap for better spacing */
+  animation: scroll-right-to-left 60s linear infinite; /* Slower animation */
   padding: 0 20px;
   width: fit-content;
   will-change: transform; /* Optimize animation performance */
+  align-items: center;
 }
 
 .ticker-token-icon {
@@ -1505,21 +1482,41 @@
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(34, 211, 238, 0.3);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 
+    0 0 20px rgba(255, 255, 255, 0.3),
+    0 0 40px rgba(255, 255, 255, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.2);
   transition: transform 0.3s ease;
   flex-shrink: 0;
 }
 
 .ticker-token-icon:hover {
   transform: scale(1.1);
-  border-color: rgba(34, 211, 238, 0.6);
+  border-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 
+    0 0 30px rgba(255, 255, 255, 0.5),
+    0 0 50px rgba(255, 255, 255, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.ticker-promo-text {
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  text-shadow: 
+    0 0 20px rgba(255, 255, 255, 0.5),
+    0 0 40px rgba(34, 211, 238, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  padding: 0 60px; /* Space between tokens and text */
+  letter-spacing: 0.5px;
 }
 
 /* Responsive adjustments for mobile */
 @media (max-width: 500px) {
   .token-icons-ticker {
-    top: calc(50% - 180px); /* Adjust for smaller screens */
+    top: 60px; /* Adjust for smaller screens */
     height: 50px;
   }
   
@@ -1529,7 +1526,12 @@
   }
   
   .token-icons-scroll {
-    gap: 15px;
+    gap: 30px;
+  }
+  
+  .ticker-promo-text {
+    font-size: 14px;
+    padding: 0 40px;
   }
 }
 
