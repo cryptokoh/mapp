@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { serverLeaderboardService, type LeaderboardEntry } from '../services/serverLeaderboard';
+import { supabaseLeaderboardService } from '../services/supabaseLeaderboard';
+import type { LeaderboardEntry } from '../services/serverLeaderboard';
 import { useFarcaster } from '../hooks/useFarcaster';
 import './Leaderboard.css';
 
@@ -24,8 +25,8 @@ export function Leaderboard({ isOpen, onClose, currentUserScore }: LeaderboardPr
 
   const loadLeaderboard = async () => {
     try {
-      const allEntries = await serverLeaderboardService.getLeaderboard();
-      const statsData = await serverLeaderboardService.getStats();
+      const allEntries = await supabaseLeaderboardService.getLeaderboard();
+      const statsData = await supabaseLeaderboardService.getStats();
       setEntries(allEntries);
       setStats(statsData);
       console.log('🏆 Loaded leaderboard:', allEntries.length, 'entries');
@@ -42,8 +43,8 @@ export function Leaderboard({ isOpen, onClose, currentUserScore }: LeaderboardPr
   useEffect(() => {
     if (user && isOpen) {
       Promise.all([
-        serverLeaderboardService.getUserRank(user.fid),
-        serverLeaderboardService.getUserBestScore(user.fid)
+        supabaseLeaderboardService.getUserRank(user.fid),
+        supabaseLeaderboardService.getUserBestScore(user.fid)
       ]).then(([rank, best]) => {
         setUserRank(rank);
         setUserBest(best);

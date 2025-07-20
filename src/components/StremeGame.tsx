@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import './StremeGame.css';
 import { ShareButton } from './ShareButton';
 import { Leaderboard } from './Leaderboard';
-import { serverLeaderboardService } from '../services/serverLeaderboard';
+import { supabaseLeaderboardService } from '../services/supabaseLeaderboard';
 import { useFarcaster } from '../hooks/useFarcaster';
 import { tokenService, type StremeToken } from '../services/tokenService';
 import { TokenCollectedPopup } from './TokenCollectedPopup';
@@ -154,6 +154,9 @@ export function StremeGame() {
   // Touch feedback
   const [touchRipples, setTouchRipples] = useState<TouchRipple[]>([]);
   
+  // SuperInu popup easter egg
+  const [showSuperinuPopup, setShowSuperinuPopup] = useState(false);
+  
   // Available tokens for spawning (fetched from Streme.fun API)
   const [availableTokens, setAvailableTokens] = useState<StremeToken[]>([]);
   const [tokensLoading, setTokensLoading] = useState(true);
@@ -190,6 +193,40 @@ export function StremeGame() {
     const centerY = (height - CHARACTER_SIZE) / 2;
     return { x: centerX, y: centerY };
   }, [getGameDimensions]);
+
+  // Test Supabase connection and permissions
+  useEffect(() => {
+    const testSupabase = async () => {
+      console.log('🧪 Testing Supabase connection and permissions...');
+      
+      try {
+        // Test connection
+        const connectionTest = await supabaseLeaderboardService.testConnection();
+        console.log('🧪 Connection test:', connectionTest ? '✅ Success' : '❌ Failed');
+        
+        // Test read permissions
+        try {
+          const leaderboard = await supabaseLeaderboardService.getLeaderboard();
+          console.log('🧪 Read permissions:', '✅ Success -', leaderboard.length, 'entries found');
+        } catch (error) {
+          console.log('🧪 Read permissions:', '❌ Failed -', error);
+        }
+        
+        // Test stats permissions
+        try {
+          const stats = await supabaseLeaderboardService.getStats();
+          console.log('🧪 Stats permissions:', '✅ Success -', stats);
+        } catch (error) {
+          console.log('🧪 Stats permissions:', '❌ Failed -', error);
+        }
+        
+      } catch (error) {
+        console.log('🧪 Supabase test error:', error);
+      }
+    };
+    
+    testSupabase();
+  }, []);
 
   // Fetch trending tokens from Streme.fun API
   useEffect(() => {
@@ -856,7 +893,7 @@ export function StremeGame() {
               return updated;
             });
             
-            serverLeaderboardService.submitScore({
+            supabaseLeaderboardService.submitScore({
               fid: user.fid,
               username: user.username,
               displayName: user.displayName,
@@ -870,6 +907,7 @@ export function StremeGame() {
                 playTime: playTimeSeconds,
                 missedTokens: prev.missedTokens,
                 rocksHit: gameMetrics.rocksHit,
+                rocksSpawned: gameMetrics.rocksSpawned,
                 speedBoostsCollected: gameMetrics.speedBoostsCollected,
                 holdBonusTotal: gameMetrics.holdBonusTotal,
                 longestStreak: gameMetrics.longestStreak,
@@ -1091,6 +1129,72 @@ export function StremeGame() {
             <button onClick={() => setShowLeaderboard(true)} className="start-button" style={{marginTop: '8px', background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)'}}>
               🏆 Leaderboard
             </button>
+            
+            <button 
+              onClick={async () => {
+                console.log('🧪 Running comprehensive Supabase test...');
+                
+                // Test write permissions with demo user
+                try {
+                  const demoUser = {
+                    fid: 999999, // Demo FID (will be rejected by validation)
+                    username: 'test-user',
+                    displayName: 'Test User',
+                    pfpUrl: 'https://example.com/avatar.png',
+                    score: 100,
+                    tokensCollected: 5,
+                    level: 2,
+                    favoriteToken: {
+                      symbol: 'TEST',
+                      name: 'Test Token',
+                      count: 3,
+                      img_url: 'https://example.com/token.png'
+                    },
+                    tokenStats: {
+                      'TEST': { count: 3, totalValue: 100, name: 'Test Token', img_url: 'https://example.com/token.png', contract_address: '0x123' }
+                    },
+                    gameplayStats: {
+                      playTime: 60,
+                      missedTokens: 2,
+                      rocksHit: 1,
+                      rocksSpawned: 5,
+                      speedBoostsCollected: 1,
+                      holdBonusTotal: 50,
+                      longestStreak: 3,
+                      totalTokenValue: 100,
+                      uniqueTokenTypes: 1
+                    }
+                  };
+                  
+                  console.log('🧪 Testing write permissions (should fail validation)...');
+                  await supabaseLeaderboardService.submitScore(demoUser);
+                  console.log('🧪 Write test:', '❌ Unexpected success - validation should have failed');
+                } catch (error) {
+                  if (error.message.includes('Only Farcaster users')) {
+                    console.log('🧪 Write validation:', '✅ Success - properly rejected demo user');
+                  } else {
+                    console.log('🧪 Write permissions:', '❌ Failed -', error);
+                  }
+                }
+                
+                // Test user lookup
+                try {
+                  const userScore = await supabaseLeaderboardService.getUserBestScore(12345);
+                  console.log('🧪 User lookup:', userScore ? '✅ Found user' : '✅ No user found (expected)');
+                } catch (error) {
+                  console.log('🧪 User lookup:', '❌ Failed -', error);
+                }
+              }}
+              className="start-button" 
+              style={{
+                marginTop: '8px', 
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                fontSize: '12px',
+                padding: '8px 16px'
+              }}
+            >
+              🧪 Test Supabase
+            </button>
             </div>
             
             {/* Token Icons Ticker - Outside the box */}
@@ -1217,7 +1321,7 @@ export function StremeGame() {
             onClick={() => window.open('https://farcaster.xyz/koh', '_blank')}
             style={{
               position: 'absolute',
-              bottom: '10px',
+              bottom: '30px',
               left: '50%',
               transform: 'translateX(-50%)',
               fontSize: '12px',
@@ -1241,6 +1345,76 @@ export function StremeGame() {
             }}
           >
             🤖 Buy the dev some AI tokens
+          </div>
+        )}
+        
+        {/* STREAM $SUPERINU Easter Egg Button */}
+        {gameState.gameOver && (
+          <div 
+            onClick={() => {
+              setShowSuperinuPopup(true);
+              setTimeout(() => setShowSuperinuPopup(false), 4000);
+            }}
+            className="stream-superinu-button"
+            style={{
+              position: 'absolute',
+              bottom: '10px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              fontSize: '14px',
+              fontWeight: '800',
+              color: '#10b981',
+              cursor: 'pointer',
+              zIndex: 200,
+              pointerEvents: 'auto',
+              touchAction: 'manipulation',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              transition: 'all 0.3s ease',
+              background: 'linear-gradient(45deg, rgba(16, 185, 129, 0.1), rgba(34, 197, 94, 0.2))',
+              border: '2px solid rgba(16, 185, 129, 0.3)',
+              animation: 'streamFlow 3s ease-in-out infinite',
+              textShadow: '0 0 10px rgba(16, 185, 129, 0.6)',
+              letterSpacing: '1px'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateX(-50%) scale(1.1)';
+              e.currentTarget.style.textShadow = '0 0 20px rgba(16, 185, 129, 1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
+              e.currentTarget.style.textShadow = '0 0 10px rgba(16, 185, 129, 0.6)';
+            }}
+          >
+            STREAM $SUPERINU!
+          </div>
+        )}
+        
+        {/* SuperInu Popup */}
+        {showSuperinuPopup && (
+          <div 
+            className="superinu-popup"
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 9999,
+              pointerEvents: 'none',
+              animation: 'superinuGlow 4s ease-out forwards'
+            }}
+          >
+            <img 
+              src="/stremeinu.png" 
+              alt="SuperInu" 
+              style={{
+                width: '200px',
+                height: '200px',
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 0 30px #10b981)',
+                animation: 'superinuPulse 4s ease-out forwards'
+              }}
+            />
           </div>
         )}
         

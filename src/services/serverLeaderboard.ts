@@ -26,6 +26,7 @@ export interface LeaderboardEntry {
     playTime: number; // in seconds
     missedTokens: number;
     rocksHit: number;
+    rocksSpawned: number;
     speedBoostsCollected: number;
     holdBonusTotal: number;
     longestStreak: number;

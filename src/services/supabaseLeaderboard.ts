@@ -16,6 +16,7 @@ interface SupabaseLeaderboardEntry {
   favorite_token_count?: number
   favorite_token_img?: string
   token_stats?: Record<string, any>
+  gameplay_stats?: Record<string, any>
 }
 
 class SupabaseLeaderboardService {
@@ -56,7 +57,8 @@ class SupabaseLeaderboardService {
           count: entry.favorite_token_count || 0,
           img_url: entry.favorite_token_img || ''
         } : undefined,
-        tokenStats: entry.token_stats
+        tokenStats: entry.token_stats,
+        gameplayStats: entry.gameplay_stats
       }))
 
       console.log('✅ Supabase leaderboard loaded:', entries.length, 'entries')
@@ -108,7 +110,8 @@ class SupabaseLeaderboardService {
         favorite_token_name: entry.favoriteToken?.name,
         favorite_token_count: entry.favoriteToken?.count,
         favorite_token_img: entry.favoriteToken?.img_url,
-        token_stats: entry.tokenStats
+        token_stats: entry.tokenStats,
+        gameplay_stats: entry.gameplayStats
       }
 
       const { data, error } = await supabase
@@ -183,7 +186,8 @@ class SupabaseLeaderboardService {
           count: data.favorite_token_count || 0,
           img_url: data.favorite_token_img || ''
         } : undefined,
-        tokenStats: data.token_stats
+        tokenStats: data.token_stats,
+        gameplayStats: data.gameplay_stats
       }
     } catch (error) {
       console.error('❌ Failed to get user best score:', error)
