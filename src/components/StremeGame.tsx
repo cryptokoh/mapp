@@ -68,6 +68,27 @@ interface SpeedBoost {
   speed: number;
 }
 
+interface BlueBox {
+  id: string;
+  x: number;
+  y: number;
+  speed: number;
+}
+
+interface BlueBoxExplosion {
+  id: string;
+  x: number;
+  y: number;
+  timestamp: number;
+}
+
+interface ScorePopup {
+  id: string;
+  x: number;
+  y: number;
+  value: number;
+}
+
 interface CharacterPosition {
   x: number;
   y: number;
@@ -145,6 +166,9 @@ export function StremeGame() {
   const [speedBoosts, setSpeedBoosts] = useState<SpeedBoost[]>([]);
   const [hasSpeedBoost, setHasSpeedBoost] = useState(false);
   const [showSpeedBoostBurst, setShowSpeedBoostBurst] = useState(false);
+  const [blueBoxes, setBlueBoxes] = useState<BlueBox[]>([]);
+  const [blueBoxExplosions, setBlueBoxExplosions] = useState<BlueBoxExplosion[]>([]);
+  const [lastBlueBoxSpawn, setLastBlueBoxSpawn] = useState(0);
   
   // Hold tracking
   const [isHolding, setIsHolding] = useState(false);
@@ -153,6 +177,7 @@ export function StremeGame() {
   
   // Touch feedback
   const [touchRipples, setTouchRipples] = useState<TouchRipple[]>([]);
+  const [scorePopups, setScorePopups] = useState<ScorePopup[]>([]);
   
   // SuperInu popup easter egg
   const [showSuperinuPopup, setShowSuperinuPopup] = useState(false);
@@ -174,6 +199,7 @@ export function StremeGame() {
   const tokenCounter = useRef<number>(0);
   const rockCounter = useRef<number>(0);
   const speedBoostCounter = useRef<number>(0);
+  const blueBoxCounter = useRef<number>(0);
   const holdIntervalRef = useRef<number | null>(null);
   const holdBonusIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -194,39 +220,6 @@ export function StremeGame() {
     return { x: centerX, y: centerY };
   }, [getGameDimensions]);
 
-  // Test Supabase connection and permissions
-  useEffect(() => {
-    const testSupabase = async () => {
-      console.log('🧪 Testing Supabase connection and permissions...');
-      
-      try {
-        // Test connection
-        const connectionTest = await supabaseLeaderboardService.testConnection();
-        console.log('🧪 Connection test:', connectionTest ? '✅ Success' : '❌ Failed');
-        
-        // Test read permissions
-        try {
-          const leaderboard = await supabaseLeaderboardService.getLeaderboard();
-          console.log('🧪 Read permissions:', '✅ Success -', leaderboard.length, 'entries found');
-        } catch (error) {
-          console.log('🧪 Read permissions:', '❌ Failed -', error);
-        }
-        
-        // Test stats permissions
-        try {
-          const stats = await supabaseLeaderboardService.getStats();
-          console.log('🧪 Stats permissions:', '✅ Success -', stats);
-        } catch (error) {
-          console.log('🧪 Stats permissions:', '❌ Failed -', error);
-        }
-        
-      } catch (error) {
-        console.log('🧪 Supabase test error:', error);
-      }
-    };
-    
-    testSupabase();
-  }, []);
 
   // Fetch trending tokens from Streme.fun API
   useEffect(() => {
@@ -618,6 +611,32 @@ export function StremeGame() {
     );
   }, []);
 
+  // Spawn blue box
+  const spawnBlueBox = useCallback(() => {
+    const { width, height } = getGameDimensions();
+    
+    const newBlueBox: BlueBox = {
+      id: `bluebox-${blueBoxCounter.current++}`,
+      x: Math.random() * (width - 40),
+      y: height,
+      speed: 4 + Math.random() * 2, // Moves fast!
+    };
+
+    setBlueBoxes(prev => [...prev, newBlueBox]);
+    console.log('💙 Spawned special blue box!');
+  }, [getGameDimensions]);
+
+  // Check collision between character and blue box
+  const checkBlueBoxCollision = useCallback((char: CharacterPosition, box: BlueBox) => {
+    const boxSize = 40;
+    return (
+      char.x < box.x + boxSize &&
+      char.x + CHARACTER_SIZE > box.x &&
+      char.y < box.y + boxSize &&
+      char.y + CHARACTER_SIZE > box.y
+    );
+  }, []);
+
   // Game loop
   useEffect(() => {
     if (!gameState.isPlaying) return;
@@ -668,6 +687,12 @@ export function StremeGame() {
       if (!showRockWarning && timestamp - lastSpeedBoostSpawn.current > speedBoostInterval && !hasSpeedBoost) {
         spawnSpeedBoost();
         lastSpeedBoostSpawn.current = timestamp;
+      }
+
+      // Spawn blue boxes every 10 seconds
+      if (!showRockWarning && timestamp - lastBlueBoxSpawn > 10000) {
+        spawnBlueBox();
+        setLastBlueBoxSpawn(timestamp);
       }
 
       // Update tokens
@@ -846,6 +871,64 @@ export function StremeGame() {
 
         return updatedBoosts;
       });
+
+      // Update blue boxes
+      setBlueBoxes(prevBoxes => {
+        const updatedBoxes = prevBoxes
+          .map(box => ({
+            ...box,
+            y: box.y - box.speed, // Move upward fast!
+          }))
+          .filter(box => box.y > -40); // Remove off-screen boxes
+
+        // Check collision with character
+        updatedBoxes.forEach((box) => {
+          if (checkBlueBoxCollision(character, box)) {
+            // Award 500 points!
+            setGameState(prev => ({
+              ...prev,
+              score: prev.score + 500,
+            }));
+            
+            // Create explosion effect
+            const explosion: BlueBoxExplosion = {
+              id: `explosion-${Date.now()}`,
+              x: box.x,
+              y: box.y,
+              timestamp: Date.now(),
+            };
+            setBlueBoxExplosions(prev => [...prev, explosion]);
+            
+            // Remove collected box
+            setBlueBoxes(prev => prev.filter(b => b.id !== box.id));
+            
+            // Add to special score popup
+            const scorePopup = {
+              id: `bluebox-score-${Date.now()}`,
+              x: box.x,
+              y: box.y,
+              value: 500,
+            };
+            setScorePopups(prev => [...prev, scorePopup]);
+            
+            // Add vibration feedback
+            if ('vibrate' in navigator) {
+              navigator.vibrate([50, 50, 50, 50, 50]); // Epic vibration!
+            }
+            
+            console.log('💙 BLUE BOX COLLECTED! +500 POINTS!');
+          }
+        });
+
+        return updatedBoxes.filter(box => 
+          !updatedBoxes.some(b => b !== box && checkBlueBoxCollision(character, b))
+        );
+      });
+
+      // Clean up explosions
+      setBlueBoxExplosions(prev => 
+        prev.filter(explosion => Date.now() - explosion.timestamp < 1500)
+      );
 
       // Update score and level progression
       setGameState(prev => {
@@ -1105,8 +1188,8 @@ export function StremeGame() {
             
             <div className="preview-character">
               <img 
-                src="/superinu.png" 
-                alt="SuperInu Preview" 
+                src="/stremeinu.png" 
+                alt="StremeInu Preview" 
                 onLoad={() => console.log('🎮 Preview image loaded')}
                 onError={(e) => {
                   console.log('🎮 Preview image failed, using fallback');
@@ -1128,72 +1211,6 @@ export function StremeGame() {
             
             <button onClick={() => setShowLeaderboard(true)} className="start-button" style={{marginTop: '8px', background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)'}}>
               🏆 Leaderboard
-            </button>
-            
-            <button 
-              onClick={async () => {
-                console.log('🧪 Running comprehensive Supabase test...');
-                
-                // Test write permissions with demo user
-                try {
-                  const demoUser = {
-                    fid: 999999, // Demo FID (will be rejected by validation)
-                    username: 'test-user',
-                    displayName: 'Test User',
-                    pfpUrl: 'https://example.com/avatar.png',
-                    score: 100,
-                    tokensCollected: 5,
-                    level: 2,
-                    favoriteToken: {
-                      symbol: 'TEST',
-                      name: 'Test Token',
-                      count: 3,
-                      img_url: 'https://example.com/token.png'
-                    },
-                    tokenStats: {
-                      'TEST': { count: 3, totalValue: 100, name: 'Test Token', img_url: 'https://example.com/token.png', contract_address: '0x123' }
-                    },
-                    gameplayStats: {
-                      playTime: 60,
-                      missedTokens: 2,
-                      rocksHit: 1,
-                      rocksSpawned: 5,
-                      speedBoostsCollected: 1,
-                      holdBonusTotal: 50,
-                      longestStreak: 3,
-                      totalTokenValue: 100,
-                      uniqueTokenTypes: 1
-                    }
-                  };
-                  
-                  console.log('🧪 Testing write permissions (should fail validation)...');
-                  await supabaseLeaderboardService.submitScore(demoUser);
-                  console.log('🧪 Write test:', '❌ Unexpected success - validation should have failed');
-                } catch (error) {
-                  if (error.message.includes('Only Farcaster users')) {
-                    console.log('🧪 Write validation:', '✅ Success - properly rejected demo user');
-                  } else {
-                    console.log('🧪 Write permissions:', '❌ Failed -', error);
-                  }
-                }
-                
-                // Test user lookup
-                try {
-                  const userScore = await supabaseLeaderboardService.getUserBestScore(12345);
-                  console.log('🧪 User lookup:', userScore ? '✅ Found user' : '✅ No user found (expected)');
-                } catch (error) {
-                  console.log('🧪 User lookup:', '❌ Failed -', error);
-                }
-              }}
-              className="start-button" 
-              style={{
-                marginTop: '8px', 
-                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                fontSize: '12px',
-                padding: '8px 16px'
-              }}
-            >
-              🧪 Test Supabase
             </button>
             </div>
             
@@ -1437,8 +1454,8 @@ export function StremeGame() {
               }}
             >
               <img 
-                src="/superinu.png" 
-                alt="SuperInu" 
+                src="/stremeinu.png" 
+                alt="StremeInu" 
                 onLoad={() => console.log('🎮 Character image loaded')}
                 onError={(e) => {
                   console.log('🎮 Character image failed, using fallback');
@@ -1520,6 +1537,32 @@ export function StremeGame() {
                   <span className="speed-boost-icon">⚡</span>
                   <span className="speed-boost-text">X2</span>
                 </div>
+              </div>
+            ))}
+
+            {/* Blue Boxes */}
+            {blueBoxes.map(box => (
+              <div
+                key={box.id}
+                className="special-blue-box"
+                style={{
+                  left: `${box.x}px`,
+                  top: `${box.y}px`,
+                }}
+              />
+            ))}
+
+            {/* Blue Box Explosions */}
+            {blueBoxExplosions.map(explosion => (
+              <div
+                key={explosion.id}
+                className="blue-box-explosion"
+                style={{
+                  left: `${explosion.x}px`,
+                  top: `${explosion.y}px`,
+                }}
+              >
+                THE BASE APP!!
               </div>
             ))}
 

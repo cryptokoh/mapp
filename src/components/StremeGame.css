@@ -524,10 +524,12 @@
 
 /* Preview Character in Start Screen */
 .preview-character {
-  width: 60px;
-  height: 60px;
-  margin: 16px auto;
+  width: 80px;
+  height: 80px;
+  margin: 20px auto;
   position: relative;
+  animation: float 3s ease-in-out infinite, jiggle 4s ease-in-out infinite;
+  filter: drop-shadow(0 6px 20px rgba(34, 211, 238, 0.4));
 }
 
 .preview-character img {
@@ -535,9 +537,39 @@
   height: 100%;
   object-fit: contain;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
-  border: 2px solid rgba(139, 92, 246, 0.3);
-  animation: float 2s ease-in-out infinite;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.25), 
+    rgba(103, 232, 249, 0.15),
+    rgba(255, 255, 255, 0.1)
+  );
+  border: 3px solid rgba(34, 211, 238, 0.6);
+  box-shadow: 
+    inset 0 2px 10px rgba(255, 255, 255, 0.3),
+    0 0 20px rgba(34, 211, 238, 0.3);
+}
+
+@keyframes jiggle {
+  0%, 85%, 100% {
+    transform: rotate(0deg) scale(1);
+  }
+  86% {
+    transform: rotate(-5deg) scale(1.05);
+  }
+  88% {
+    transform: rotate(5deg) scale(1.05);
+  }
+  90% {
+    transform: rotate(-3deg) scale(1.02);
+  }
+  92% {
+    transform: rotate(3deg) scale(1.02);
+  }
+  94% {
+    transform: rotate(-1deg) scale(1.01);
+  }
+  96% {
+    transform: rotate(1deg) scale(1.01);
+  }
 }
 
 /* Buttons */
@@ -686,6 +718,85 @@
 /* Share Button Container */
 .game-over-share {
   margin-top: 16px;
+}
+
+/* Special Blue Box */
+.special-blue-box {
+  position: absolute;
+  z-index: 9;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, 
+    #1e40af 0%, 
+    #3b82f6 50%,
+    #60a5fa 100%
+  );
+  border: 3px solid rgba(30, 64, 175, 0.9);
+  border-radius: 6px;
+  box-shadow: 
+    inset 0 2px 10px rgba(255, 255, 255, 0.6),
+    0 0 30px rgba(59, 130, 246, 0.8),
+    0 6px 20px rgba(0, 0, 0, 0.3);
+  animation: blueBoxPulse 0.8s ease-in-out infinite, blueBoxFloat 3s ease-in-out infinite;
+  transition: all 0.1s linear;
+}
+
+@keyframes blueBoxPulse {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    box-shadow: 
+      inset 0 2px 10px rgba(255, 255, 255, 0.6),
+      0 0 30px rgba(59, 130, 246, 0.8),
+      0 6px 20px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 
+      inset 0 2px 15px rgba(255, 255, 255, 0.8),
+      0 0 40px rgba(59, 130, 246, 1),
+      0 8px 25px rgba(0, 0, 0, 0.4);
+  }
+}
+
+@keyframes blueBoxFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Blue Box Explosion Text */
+.blue-box-explosion {
+  position: absolute;
+  z-index: 20;
+  font-size: 24px;
+  font-weight: 900;
+  color: #3b82f6;
+  text-shadow: 
+    0 0 20px rgba(59, 130, 246, 0.8),
+    0 0 40px rgba(59, 130, 246, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: explodeText 1.5s ease-out forwards;
+}
+
+@keyframes explodeText {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1.5) rotate(-5deg);
+    opacity: 1;
+  }
+  40% {
+    transform: scale(1.2) rotate(3deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2) rotate(0deg) translateY(-50px);
+    opacity: 0;
+  }
 }
 
 /* River Rocks */
@@ -1182,8 +1293,8 @@
   }
   
   .preview-character {
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
   }
   
   .game-instructions p {
@@ -1382,21 +1493,21 @@
 }
 
 .trending-button-game {
-  background: rgba(8, 51, 68, 0.9);
-  border: 2px solid rgba(34, 211, 238, 0.4);
-  border-radius: 12px;
-  padding: 8px 12px;
-  font-size: 18px;
+  background: rgba(8, 51, 68, 0.3);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  border-radius: 8px;
+  padding: 2px 6px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
   z-index: 10;
-  margin-right: 10px;
+  margin-right: 4px;
 }
 
 .trending-button-game:hover {
-  background: rgba(14, 116, 144, 0.9);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+  background: rgba(14, 116, 144, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(34, 211, 238, 0.2);
 }
 
 @keyframes tokenScoreFloat {
@@ -1446,23 +1557,23 @@
 /* Enhanced Game Stats */
 .game-stats-enhanced {
   position: absolute;
-  top: 20px;
+  top: 4px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 24px;
+  gap: 12px;
   background: linear-gradient(135deg, 
-    rgba(8, 51, 68, 0.95) 0%,
-    rgba(14, 116, 144, 0.85) 100%
+    rgba(8, 51, 68, 0.15) 0%,
+    rgba(14, 116, 144, 0.15) 100%
   );
-  backdrop-filter: blur(16px);
-  border: 2px solid rgba(34, 211, 238, 0.4);
-  border-radius: 20px;
-  padding: 12px 20px;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(8, 51, 68, 0.8);
+  border-radius: 12px;
+  padding: 3px 10px;
   z-index: 15;
   box-shadow: 
-    0 6px 20px rgba(34, 211, 238, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   align-items: center;
 }
 
@@ -1471,24 +1582,25 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 0;
 }
 
 .score-label {
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.8);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  line-height: 1;
 }
 
 .score-value {
-  font-size: 24px;
+  font-size: 14px;
   font-weight: 800;
   color: #67e8f9;
   text-shadow: 
-    0 2px 8px rgba(103, 232, 249, 0.6),
-    0 0 20px rgba(34, 211, 238, 0.4);
+    0 1px 4px rgba(103, 232, 249, 0.6),
+    0 0 10px rgba(34, 211, 238, 0.4);
   line-height: 1;
 }
 
@@ -1497,24 +1609,25 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 0;
 }
 
 .level-label {
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.8);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  line-height: 1;
 }
 
 .level-value {
-  font-size: 20px;
+  font-size: 13px;
   font-weight: 800;
   color: #fbbf24;
   text-shadow: 
-    0 2px 8px rgba(251, 191, 36, 0.6),
-    0 0 15px rgba(245, 158, 11, 0.4);
+    0 1px 4px rgba(251, 191, 36, 0.6),
+    0 0 8px rgba(245, 158, 11, 0.4);
   line-height: 1;
 }
 
@@ -1523,7 +1636,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 0;
   position: relative;
   transition: all 0.3s ease;
 }
@@ -1537,37 +1650,40 @@
     transform: scale(1);
   }
   50% {
-    transform: scale(1.05);
+    transform: scale(1.02);
   }
 }
 
 .missed-label {
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.8);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  line-height: 1;
 }
 
 .missed-count {
-  font-size: 18px;
+  font-size: 12px;
   font-weight: 700;
   color: white;
   transition: color 0.3s ease;
+  line-height: 1;
 }
 
 .danger-indicator.danger-zone .missed-count {
   color: #ef4444;
-  text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+  text-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
 }
 
 .danger-bar {
-  width: 60px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
+  width: 40px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 1px;
   overflow: hidden;
   position: relative;
+  margin-top: 2px;
 }
 
 .danger-fill {
