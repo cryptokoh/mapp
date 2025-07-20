@@ -22,6 +22,11 @@ interface SupabaseLeaderboardEntry {
 class SupabaseLeaderboardService {
   // Get all leaderboard entries
   async getLeaderboard(): Promise<LeaderboardEntry[]> {
+    if (!supabase) {
+      console.warn('⚠️ Supabase not configured - returning empty leaderboard')
+      return []
+    }
+    
     try {
       console.log('🏆 Fetching leaderboard from Supabase...')
       const { data, error } = await supabase
@@ -81,6 +86,11 @@ class SupabaseLeaderboardService {
 
   // Submit a new score (Farcaster users only)
   async submitScore(entry: Omit<LeaderboardEntry, 'id' | 'timestamp' | 'rank'>): Promise<LeaderboardEntry> {
+    if (!supabase) {
+      console.warn('⚠️ Supabase not configured - cannot submit score')
+      throw new Error('Leaderboard service is not available')
+    }
+    
     // Validate that this is a real Farcaster user (not demo/fallback)
     if (!entry.fid || entry.fid >= 888888) {
       throw new Error('Only Farcaster users can submit scores to the leaderboard')
@@ -158,6 +168,11 @@ class SupabaseLeaderboardService {
 
   // Get user's best score and rank
   async getUserBestScore(fid: number): Promise<LeaderboardEntry | null> {
+    if (!supabase) {
+      console.warn('⚠️ Supabase not configured - returning null')
+      return null
+    }
+    
     try {
       const { data, error } = await supabase
         .from('leaderboard')
@@ -217,6 +232,11 @@ class SupabaseLeaderboardService {
 
   // Get user's rank
   async getUserRank(fid: number): Promise<number | null> {
+    if (!supabase) {
+      console.warn('⚠️ Supabase not configured - returning null')
+      return null
+    }
+    
     try {
       const { data: userScore } = await supabase
         .from('leaderboard')
@@ -249,6 +269,15 @@ class SupabaseLeaderboardService {
 
   // Get stats
   async getStats(): Promise<{ totalPlayers: number; totalScores: number; highestScore: number }> {
+    if (!supabase) {
+      console.warn('⚠️ Supabase not configured - returning default stats')
+      return {
+        totalPlayers: 0,
+        totalScores: 0,
+        highestScore: 0
+      }
+    }
+    
     try {
       // Get total unique players
       const { data: players, error: playersError } = await supabase
@@ -291,6 +320,11 @@ class SupabaseLeaderboardService {
 
   // Test database connection
   async testConnection(): Promise<boolean> {
+    if (!supabase) {
+      console.warn('⚠️ Supabase not configured - connection test failed')
+      return false
+    }
+    
     try {
       const { error } = await supabase
         .from('leaderboard')
