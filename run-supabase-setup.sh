@@ -1,0 +1,23 @@
+#!/bin/bash
+
+echo "🏆 SuperInu River - Supabase Setup Instructions"
+echo "=============================================="
+echo ""
+echo "The SQL setup script is ready at: $(pwd)/supabase-setup.sql"
+echo ""
+echo "📋 TO SETUP THE DATABASE:"
+echo "1. Open your Supabase Dashboard: https://app.supabase.com"
+echo "2. Select your project (nkfoxyaxtkfwsncunqne.supabase.co)"
+echo "3. Click 'SQL Editor' in the left sidebar"
+echo "4. Click 'New query'"
+echo "5. Copy and paste the content below:"
+echo ""
+echo "========== COPY THIS SQL =========="
+cat supabase-setup.sql
+echo ""
+echo "========== END SQL =========="
+echo ""
+echo "6. Click 'Run' to execute the script"
+echo "7. Refresh your Mini App and test with the '🧪 Test Supabase' button"
+echo ""
+echo "✅ After running this, your leaderboard will work with persistent storage!"
