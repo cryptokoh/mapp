@@ -16,7 +16,6 @@
     "@farcaster/frame-sdk": "^0.0.64",
     "@farcaster/frame-wagmi-connector": "^0.0.53",
     "@neynar/nodejs-sdk": "^2.46.0",
-    "@supabase/supabase-js": "^2.52.0",
     "bmad-method": "^4.30.4",
     "framer-motion": "^12.19.1",
     "process": "^0.11.10",

@@ -11,6 +11,30 @@ interface LeaderboardEntry {
   level: number;
   timestamp: number;
   rank?: number;
+  favoriteToken?: {
+    symbol: string;
+    name: string;
+    count: number;
+    img_url: string;
+  };
+  tokenStats?: Record<string, {
+    count: number;
+    totalValue: number;
+    name: string;
+    img_url: string;
+    contract_address?: string;
+  }>;
+  gameplayStats?: {
+    playTime: number;
+    missedTokens: number;
+    rocksHit: number;
+    rocksSpawned: number;
+    speedBoostsCollected: number;
+    holdBonusTotal: number;
+    longestStreak: number;
+    totalTokenValue: number;
+    uniqueTokenTypes: number;
+  };
 }
 
 interface LeaderboardResponse {
@@ -121,6 +145,9 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
         tokensCollected: Math.max(0, Math.floor(entryData.tokensCollected)),
         level: Math.max(1, Math.floor(entryData.level)),
         timestamp: Date.now(),
+        favoriteToken: entryData.favoriteToken,
+        tokenStats: entryData.tokenStats,
+        gameplayStats: entryData.gameplayStats,
       };
 
       // Add to leaderboard

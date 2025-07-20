@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import './StremeGame.css';
 import { ShareButton } from './ShareButton';
 import { Leaderboard } from './Leaderboard';
-import { supabaseLeaderboardService } from '../services/supabaseLeaderboard';
+import { serverLeaderboardService } from '../services/serverLeaderboard';
 import { useFarcaster } from '../hooks/useFarcaster';
 import { tokenService, type StremeToken } from '../services/tokenService';
 import { notificationService } from '../services/notificationService';
@@ -995,7 +995,7 @@ export function StremeGame() {
               return updated;
             });
             
-            supabaseLeaderboardService.submitScore({
+            serverLeaderboardService.submitScore({
               fid: user.fid,
               username: user.username,
               displayName: user.displayName,
