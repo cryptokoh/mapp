@@ -344,7 +344,7 @@
 /* Game Screens */
 .game-start {
   position: absolute;
-  top: 30%;
+  top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   background: linear-gradient(135deg, 
