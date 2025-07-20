@@ -27,6 +27,7 @@
     "tagline": "Streme'n the Trendiest Tokens",
     "ogTitle": "StremeInu: A $SuperInu River Adventure",
     "ogDescription": "Join $SuperInu catch the trendiest tokens on Streme.Fun in the Superfluid River.",
-    "ogImageUrl": "https://fcmapp.netlify.app/superinu.png"
+    "ogImageUrl": "https://fcmapp.netlify.app/superinu.png",
+    "webHookUrl": "https://api.neynar.com/f/app/20df84d2-f2cf-452f-810d-8676d5a48716/event"
   }
 }
