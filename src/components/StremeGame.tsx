@@ -7,7 +7,7 @@ import { useFarcaster } from '../hooks/useFarcaster';
 import { tokenService, type StremeToken } from '../services/tokenService';
 import { TokenCollectedPopup } from './TokenCollectedPopup';
 import { Tutorial } from './Tutorial';
-import { DonationButton } from './DonationButton';
+import TrendingScreen from './TrendingScreen';
 
 // Game constants
 const MAX_CONTAINER_WIDTH = 424;
@@ -61,6 +61,13 @@ interface Rock {
   variant: number; // For visual variety (1-3)
 }
 
+interface SpeedBoost {
+  id: string;
+  x: number;
+  y: number;
+  speed: number;
+}
+
 interface CharacterPosition {
   x: number;
   y: number;
@@ -83,6 +90,37 @@ export function StremeGame() {
     missedTokens: 0,
   });
   
+  // Additional game metrics
+  const [gameMetrics, setGameMetrics] = useState({
+    startTime: 0,
+    rocksHit: 0,
+    rocksSpawned: 0,
+    speedBoostsCollected: 0,
+    holdBonusTotal: 0,
+    longestStreak: 0,
+    currentStreak: 0,
+    totalTokenValue: 0,
+    uniqueTokenTypes: new Set<string>(),
+  });
+  
+  // Persistent stats (stored in localStorage)
+  const [persistentStats, setPersistentStats] = useState(() => {
+    const stored = localStorage.getItem('streme-persistent-stats');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        console.error('Failed to parse persistent stats:', e);
+      }
+    }
+    return {
+      totalTimePlayed: 0, // in seconds
+      gamesPlayed: 0,
+      bestScore: 0,
+      totalTokensCollected: 0,
+    };
+  });
+  
   // Rock warning state
   const [showRockWarning, setShowRockWarning] = useState(false);
 
@@ -91,7 +129,11 @@ export function StremeGame() {
 
   // Tutorial state
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showTrending, setShowTrending] = useState(false);
   const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
+  
+  // Game over screen pages
+  const [gameOverPage, setGameOverPage] = useState<'main' | 'stats' | 'final'>('main');
 
   // Character position and movement
   const [character, setCharacter] = useState<CharacterPosition>({ x: 0, y: 0 });
@@ -100,6 +142,14 @@ export function StremeGame() {
   // Game objects
   const [tokens, setTokens] = useState<GameObject[]>([]);
   const [rocks, setRocks] = useState<Rock[]>([]);
+  const [speedBoosts, setSpeedBoosts] = useState<SpeedBoost[]>([]);
+  const [hasSpeedBoost, setHasSpeedBoost] = useState(false);
+  const [showSpeedBoostBurst, setShowSpeedBoostBurst] = useState(false);
+  
+  // Hold tracking
+  const [isHolding, setIsHolding] = useState(false);
+  const [holdBonusCount, setHoldBonusCount] = useState(0);
+  const [showHoldBonus, setShowHoldBonus] = useState(false);
   
   // Touch feedback
   const [touchRipples, setTouchRipples] = useState<TouchRipple[]>([]);
@@ -117,8 +167,12 @@ export function StremeGame() {
   const animationRef = useRef<number>(0);
   const lastTokenSpawn = useRef<number>(0);
   const lastRockSpawn = useRef<number>(0);
+  const lastSpeedBoostSpawn = useRef<number>(0);
   const tokenCounter = useRef<number>(0);
   const rockCounter = useRef<number>(0);
+  const speedBoostCounter = useRef<number>(0);
+  const holdIntervalRef = useRef<number | null>(null);
+  const holdBonusIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Calculate container dimensions
   const getGameDimensions = useCallback(() => {
@@ -187,12 +241,51 @@ export function StremeGame() {
     return () => window.removeEventListener('resize', handleResize);
   }, [getCharacterCenterPosition]);
 
+  // Keyboard controls for desktop
+  useEffect(() => {
+    if (!gameState.isPlaying) return;
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      const { width, height } = getGameDimensions();
+      const moveSpeed = 40; // Increased for more responsive keyboard movement
+      
+      let newX = targetPosition.x;
+      let newY = targetPosition.y;
+      
+      switch(e.key.toLowerCase()) {
+        case 'arrowup':
+        case 'w':
+          newY = Math.max(0, targetPosition.y - moveSpeed);
+          break;
+        case 'arrowdown':
+        case 's':
+          newY = Math.min(height - CHARACTER_SIZE, targetPosition.y + moveSpeed);
+          break;
+        case 'arrowleft':
+        case 'a':
+          newX = Math.max(0, targetPosition.x - moveSpeed);
+          break;
+        case 'arrowright':
+        case 'd':
+          newX = Math.min(width - CHARACTER_SIZE, targetPosition.x + moveSpeed);
+          break;
+      }
+      
+      if (newX !== targetPosition.x || newY !== targetPosition.y) {
+        setTargetPosition({ x: newX, y: newY });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [gameState.isPlaying, targetPosition, getGameDimensions]);
+
   // Mobile-first tap-to-move controls
   useEffect(() => {
     const gameContainer = gameRef.current;
     if (!gameContainer) return;
 
-    const handleTapMove = (clientX: number, clientY: number) => {
+    const handleTapMove = (clientX: number, clientY: number, isInitialTap: boolean = true) => {
       if (!gameState.isPlaying) return;
 
       const rect = gameContainer.getBoundingClientRect();
@@ -216,15 +309,36 @@ export function StremeGame() {
         setTouchRipples(prev => prev.filter(r => r.id !== ripple.id));
       }, 600);
       
-      // Calculate target position (center character on tap point)
-      const targetX = tapX - CHARACTER_SIZE / 2;
-      const targetY = tapY - CHARACTER_SIZE / 2;
+      // Calculate direction from character to tap point
+      const currentCenterX = character.x + CHARACTER_SIZE / 2;
+      const currentCenterY = character.y + CHARACTER_SIZE / 2;
+      const deltaX = tapX - currentCenterX;
+      const deltaY = tapY - currentCenterY;
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
       
-      // Clamp to boundaries and set target
-      const clampedX = Math.max(0, Math.min(targetX, width - CHARACTER_SIZE));
-      const clampedY = Math.max(0, Math.min(targetY, height - CHARACTER_SIZE));
+      // Move incrementally in the direction of the tap (smaller increments)
+      const maxMoveDistance = 50; // Reduced from 100 to 50 for more controlled movement
+      const moveDistance = Math.min(distance, maxMoveDistance);
       
-      setTargetPosition({ x: clampedX, y: clampedY });
+      if (distance > 0) {
+        // If we're still moving to a previous target, don't add a new one too far away
+        const currentTargetDistance = Math.sqrt(
+          Math.pow(targetPosition.x - character.x, 2) + 
+          Math.pow(targetPosition.y - character.y, 2)
+        );
+        
+        // Only update target if we're close to the current target or clicking in a new direction
+        if (currentTargetDistance < 30 || isInitialTap) {
+          const targetX = character.x + (deltaX / distance) * moveDistance;
+          const targetY = character.y + (deltaY / distance) * moveDistance;
+          
+          // Clamp to boundaries and set target
+          const clampedX = Math.max(0, Math.min(targetX, width - CHARACTER_SIZE));
+          const clampedY = Math.max(0, Math.min(targetY, height - CHARACTER_SIZE));
+          
+          setTargetPosition({ x: clampedX, y: clampedY });
+        }
+      }
       
       // Haptic feedback if available
       if ('vibrate' in navigator && navigator.vibrate) {
@@ -232,42 +346,121 @@ export function StremeGame() {
       }
     };
 
-    const handleTouch = (e: TouchEvent) => {
-      // Only handle touch if we're playing and not touching a button
+    let currentTouchX = 0;
+    let currentTouchY = 0;
+
+    const startHolding = (clientX: number, clientY: number) => {
+      setIsHolding(true);
+      setHoldBonusCount(0);
+      
+      // Initial move
+      handleTapMove(clientX, clientY);
+      
+      // Start continuous movement
+      holdIntervalRef.current = window.setInterval(() => {
+        handleTapMove(clientX, clientY, false);
+      }, 200); // Move every 200ms while holding
+      
+      // Start bonus point timer
+      holdBonusIntervalRef.current = setInterval(() => {
+        setGameState(prev => ({
+          ...prev,
+          score: prev.score + 1
+        }));
+        setHoldBonusCount(prev => prev + 1);
+        setGameMetrics(prev => ({
+          ...prev,
+          holdBonusTotal: prev.holdBonusTotal + 1,
+        }));
+        setShowHoldBonus(true);
+        setTimeout(() => setShowHoldBonus(false), 500);
+      }, 2000); // Bonus every 2 seconds
+    };
+
+    const stopHolding = () => {
+      setIsHolding(false);
+      setHoldBonusCount(0);
+      
+      if (holdIntervalRef.current) {
+        window.clearInterval(holdIntervalRef.current);
+        holdIntervalRef.current = null;
+      }
+      
+      if (holdBonusIntervalRef.current) {
+        clearInterval(holdBonusIntervalRef.current);
+        holdBonusIntervalRef.current = null;
+      }
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('button') || target.closest('.share-container') || target.closest('.game-start') || target.closest('.game-over')) {
-        return; // Let buttons handle their own events
+        return;
       }
       
       e.preventDefault();
       if (e.touches.length > 0) {
-        handleTapMove(e.touches[0].clientX, e.touches[0].clientY);
+        currentTouchX = e.touches[0].clientX;
+        currentTouchY = e.touches[0].clientY;
+        startHolding(currentTouchX, currentTouchY);
       }
     };
 
-    const handleClick = (e: MouseEvent) => {
-      // Only handle click if we're playing and not clicking a button
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isHolding) return;
+      e.preventDefault();
+      if (e.touches.length > 0) {
+        currentTouchX = e.touches[0].clientX;
+        currentTouchY = e.touches[0].clientY;
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      stopHolding();
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('button') || target.closest('.share-container') || target.closest('.game-start') || target.closest('.game-over')) {
-        return; // Let buttons handle their own events
+        return;
       }
       
-      handleTapMove(e.clientX, e.clientY);
+      startHolding(e.clientX, e.clientY);
     };
 
-    // Only add touch listeners when actively playing
+    const handleMouseUp = () => {
+      stopHolding();
+    };
+
+    const handleMouseLeave = () => {
+      stopHolding();
+    };
+
+    // Only add listeners when actively playing
     if (gameState.isPlaying) {
-      gameContainer.addEventListener('touchstart', handleTouch, { passive: false });
-      gameContainer.addEventListener('touchmove', handleTouch, { passive: false });
-      gameContainer.addEventListener('click', handleClick);
+      gameContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+      gameContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+      gameContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
+      gameContainer.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+      
+      gameContainer.addEventListener('mousedown', handleMouseDown);
+      gameContainer.addEventListener('mouseup', handleMouseUp);
+      gameContainer.addEventListener('mouseleave', handleMouseLeave);
     }
 
     return () => {
-      gameContainer.removeEventListener('touchstart', handleTouch);
-      gameContainer.removeEventListener('touchmove', handleTouch);
-      gameContainer.removeEventListener('click', handleClick);
+      stopHolding(); // Clean up on unmount
+      gameContainer.removeEventListener('touchstart', handleTouchStart);
+      gameContainer.removeEventListener('touchmove', handleTouchMove);
+      gameContainer.removeEventListener('touchend', handleTouchEnd);
+      gameContainer.removeEventListener('touchcancel', handleTouchEnd);
+      
+      gameContainer.removeEventListener('mousedown', handleMouseDown);
+      gameContainer.removeEventListener('mouseup', handleMouseUp);
+      gameContainer.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [gameState.isPlaying, getGameDimensions]);
+  }, [gameState.isPlaying, getGameDimensions, character, targetPosition, isHolding]);
 
   // Spawn tokens
   const spawnToken = useCallback(() => {
@@ -293,6 +486,12 @@ export function StremeGame() {
 
   // Spawn rocks
   const spawnRock = useCallback(() => {
+    // Limit to 3 rocks maximum on screen
+    if (rocks.length >= 3) {
+      console.log('🪨 Max rocks reached (3), skipping spawn');
+      return;
+    }
+    
     const { width, height } = getGameDimensions();
     const rockSize = ROCK_MIN_SIZE + Math.random() * (ROCK_MAX_SIZE - ROCK_MIN_SIZE);
     
@@ -327,8 +526,27 @@ export function StremeGame() {
     };
 
     setRocks(prev => [...prev, newRock]);
+    setGameMetrics(prev => ({
+      ...prev,
+      rocksSpawned: prev.rocksSpawned + 1,
+    }));
     console.log('🪨 Spawned rock:', newRock.id);
   }, [getGameDimensions, rocks]);
+
+  // Spawn speed boost
+  const spawnSpeedBoost = useCallback(() => {
+    const { width, height } = getGameDimensions();
+    
+    const newSpeedBoost: SpeedBoost = {
+      id: `speedboost-${speedBoostCounter.current++}`,
+      x: Math.random() * (width - 60),
+      y: height,
+      speed: 1.5 + Math.random() * 1, // Moves slower than tokens
+    };
+
+    setSpeedBoosts(prev => [...prev, newSpeedBoost]);
+    console.log('⚡ Spawned speed boost!');
+  }, [getGameDimensions]);
 
   // Check collision between character and token
   const checkCollision = useCallback((char: CharacterPosition, token: GameObject) => {
@@ -352,6 +570,17 @@ export function StremeGame() {
     );
   }, []);
 
+  // Check collision between character and speed boost
+  const checkSpeedBoostCollision = useCallback((char: CharacterPosition, boost: SpeedBoost) => {
+    const boostSize = 60;
+    return (
+      char.x < boost.x + boostSize &&
+      char.x + CHARACTER_SIZE > boost.x &&
+      char.y < boost.y + boostSize &&
+      char.y + CHARACTER_SIZE > boost.y
+    );
+  }, []);
+
   // Game loop
   useEffect(() => {
     if (!gameState.isPlaying) return;
@@ -367,13 +596,13 @@ export function StremeGame() {
           return targetPosition;
         }
         
-        // Ultra-fast movement - nearly instant
-        const speed = Math.min(distance * 0.5, 30); // Even faster: 0.5 interpolation, max speed 30
-        const moveX = prev.x + (deltaX / distance) * speed;
-        const moveY = prev.y + (deltaY / distance) * speed;
+        // Instant responsive movement - no lag
+        const baseSpeed = hasSpeedBoost ? 18 : 12; // Fixed speed for instant response
+        const moveX = prev.x + (deltaX / distance) * baseSpeed;
+        const moveY = prev.y + (deltaY / distance) * baseSpeed;
         
-        // If very close, just snap to position
-        if (distance < 10) {
+        // If we would overshoot, snap to target
+        if (distance <= baseSpeed) {
           return targetPosition;
         }
         
@@ -387,14 +616,21 @@ export function StremeGame() {
       }
 
       // Spawn rocks periodically with difficulty progression (wait for rock warning)
-      const rockSpawnInterval = Math.max(2000, 3500 - (gameState.level - 1) * 200); // Gets faster with levels
+      const rockSpawnInterval = Math.max(3000, 5000 - (gameState.level - 1) * 300); // Much slower rock spawning
       if (!showRockWarning && timestamp - lastRockSpawn.current > rockSpawnInterval) {
         spawnRock();
-        // Sometimes spawn 2 rocks at higher levels
-        if (gameState.level >= 3 && Math.random() < 0.3) {
-          setTimeout(() => spawnRock(), 300);
+        // Sometimes spawn 2 rocks at higher levels (reduced chance)
+        if (gameState.level >= 5 && Math.random() < 0.2) {
+          setTimeout(() => spawnRock(), 500);
         }
         lastRockSpawn.current = timestamp;
+      }
+
+      // Spawn speed boosts occasionally
+      const speedBoostInterval = 15000 + Math.random() * 10000; // Every 15-25 seconds
+      if (!showRockWarning && timestamp - lastSpeedBoostSpawn.current > speedBoostInterval && !hasSpeedBoost) {
+        spawnSpeedBoost();
+        lastSpeedBoostSpawn.current = timestamp;
       }
 
       // Update tokens
@@ -410,6 +646,11 @@ export function StremeGame() {
               setGameState(prev => ({
                 ...prev,
                 missedTokens: prev.missedTokens + 1,
+              }));
+              // Reset streak on missed token
+              setGameMetrics(prev => ({
+                ...prev,
+                currentStreak: 0,
               }));
               console.log('🎮 Token missed:', token.token.symbol);
               return false;
@@ -429,6 +670,21 @@ export function StremeGame() {
               tokensCollected: prev.tokensCollected + 1,
               score: prev.score + tokenValue,
             }));
+            
+            // Update game metrics
+            setGameMetrics(prev => {
+              const newStreak = prev.currentStreak + 1;
+              const newUniqueTokens = new Set(prev.uniqueTokenTypes);
+              newUniqueTokens.add(token.token.symbol);
+              
+              return {
+                ...prev,
+                currentStreak: newStreak,
+                longestStreak: Math.max(prev.longestStreak, newStreak),
+                totalTokenValue: prev.totalTokenValue + tokenValue,
+                uniqueTokenTypes: newUniqueTokens,
+              };
+            });
 
             // Track token collection stats
             setTokenStats(prev => ({
@@ -484,6 +740,13 @@ export function StremeGame() {
               missedTokens: prev.missedTokens + 3, // Hitting a rock counts as missing 3 tokens
             }));
             
+            // Track rock hit in metrics
+            setGameMetrics(prev => ({
+              ...prev,
+              rocksHit: prev.rocksHit + 1,
+              currentStreak: 0, // Reset streak on rock hit
+            }));
+            
             // Remove the rock after collision
             setRocks(current => current.filter(r => r.id !== rock.id));
             
@@ -497,6 +760,54 @@ export function StremeGame() {
         });
 
         return updatedRocks;
+      });
+
+      // Update speed boosts
+      setSpeedBoosts(prevBoosts => {
+        const updatedBoosts = prevBoosts
+          .map(boost => ({
+            ...boost,
+            y: boost.y - boost.speed, // Move upward
+          }))
+          .filter(boost => boost.y > -60); // Remove off-screen boosts
+
+        // Check collision with character
+        updatedBoosts.forEach((boost) => {
+          if (checkSpeedBoostCollision(character, boost)) {
+            // Activate speed boost
+            setHasSpeedBoost(true);
+            setShowSpeedBoostBurst(true);
+            
+            // Track speed boost collection
+            setGameMetrics(prev => ({
+              ...prev,
+              speedBoostsCollected: prev.speedBoostsCollected + 1,
+            }));
+            
+            // Remove collected boost
+            setSpeedBoosts(current => current.filter(b => b.id !== boost.id));
+            
+            // Haptic feedback
+            if ('vibrate' in navigator && navigator.vibrate) {
+              navigator.vibrate([30, 30, 30]); // Triple vibration
+            }
+            
+            console.log('⚡ Speed boost collected!');
+            
+            // Deactivate after 5 seconds
+            setTimeout(() => {
+              setHasSpeedBoost(false);
+              console.log('⚡ Speed boost ended');
+            }, 5000);
+            
+            // Hide burst after animation
+            setTimeout(() => {
+              setShowSpeedBoostBurst(false);
+            }, 1500);
+          }
+        });
+
+        return updatedBoosts;
       });
 
       // Update score and level progression
@@ -530,6 +841,21 @@ export function StremeGame() {
               img_url: tokenStats[favoriteTokenSymbol].img_url,
             } : undefined;
 
+            // Calculate play time in seconds
+            const playTimeSeconds = Math.floor((Date.now() - gameMetrics.startTime) / 1000);
+            
+            // Update persistent stats with totals
+            setPersistentStats((prevStats: any) => {
+              const updated = {
+                ...prevStats,
+                totalTimePlayed: prevStats.totalTimePlayed + playTimeSeconds,
+                bestScore: Math.max(prevStats.bestScore, prev.score),
+                totalTokensCollected: prevStats.totalTokensCollected + prev.tokensCollected,
+              };
+              localStorage.setItem('streme-persistent-stats', JSON.stringify(updated));
+              return updated;
+            });
+            
             serverLeaderboardService.submitScore({
               fid: user.fid,
               username: user.username,
@@ -540,6 +866,16 @@ export function StremeGame() {
               level: prev.level,
               favoriteToken,
               tokenStats,
+              gameplayStats: {
+                playTime: playTimeSeconds,
+                missedTokens: prev.missedTokens,
+                rocksHit: gameMetrics.rocksHit,
+                speedBoostsCollected: gameMetrics.speedBoostsCollected,
+                holdBonusTotal: gameMetrics.holdBonusTotal,
+                longestStreak: gameMetrics.longestStreak,
+                totalTokenValue: gameMetrics.totalTokenValue,
+                uniqueTokenTypes: gameMetrics.uniqueTokenTypes.size,
+              },
             }).then(leaderboardEntry => {
               console.log('🏆 Score submitted to server:', leaderboardEntry);
             }).catch(error => {
@@ -571,11 +907,14 @@ export function StremeGame() {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [gameState.isPlaying, character, targetPosition, spawnToken, spawnRock, checkCollision, checkRockCollision, getGameDimensions, showRockWarning, tokenStats]);
+  }, [gameState.isPlaying, character, targetPosition, spawnToken, spawnRock, spawnSpeedBoost, checkCollision, checkRockCollision, checkSpeedBoostCollision, getGameDimensions, showRockWarning, tokenStats, hasSpeedBoost]);
 
   // Start game
   const startGame = useCallback(() => {
     console.log('🎮 Starting game...');
+    
+    // Reset game over page
+    setGameOverPage('main');
     
     // Show tutorial for first-time players
     if (!hasSeenTutorial) {
@@ -588,6 +927,9 @@ export function StremeGame() {
     setTargetPosition(centerPos);
     setTokens([]);
     setRocks([]);
+    setSpeedBoosts([]);
+    setHasSpeedBoost(false);
+    setShowSpeedBoostBurst(false);
     setCollectedTokenPopups([]);
     setTokenStats({});
     setTouchRipples([]);
@@ -600,8 +942,33 @@ export function StremeGame() {
       tokensCollected: 0,
       missedTokens: 0,
     });
+    
+    // Reset game metrics and track start time
+    setGameMetrics({
+      startTime: Date.now(),
+      rocksHit: 0,
+      rocksSpawned: 0,
+      speedBoostsCollected: 0,
+      holdBonusTotal: 0,
+      longestStreak: 0,
+      currentStreak: 0,
+      totalTokenValue: 0,
+      uniqueTokenTypes: new Set<string>(),
+    });
+    
+    // Update persistent stats
+    setPersistentStats((prev: any) => {
+      const updated = {
+        ...prev,
+        gamesPlayed: prev.gamesPlayed + 1,
+      };
+      localStorage.setItem('streme-persistent-stats', JSON.stringify(updated));
+      return updated;
+    });
+    
     lastTokenSpawn.current = 0;
     lastRockSpawn.current = 0;
+    lastSpeedBoostSpawn.current = 0;
     
     // Show rock warning for 3 seconds
     setShowRockWarning(true);
@@ -622,6 +989,9 @@ export function StremeGame() {
     setTargetPosition(centerPos);
     setTokens([]);
     setRocks([]);
+    setSpeedBoosts([]);
+    setHasSpeedBoost(false);
+    setShowSpeedBoostBurst(false);
     setCollectedTokenPopups([]);
     setTokenStats({});
     setTouchRipples([]);
@@ -634,8 +1004,33 @@ export function StremeGame() {
       tokensCollected: 0,
       missedTokens: 0,
     });
+    
+    // Reset game metrics and track start time
+    setGameMetrics({
+      startTime: Date.now(),
+      rocksHit: 0,
+      rocksSpawned: 0,
+      speedBoostsCollected: 0,
+      holdBonusTotal: 0,
+      longestStreak: 0,
+      currentStreak: 0,
+      totalTokenValue: 0,
+      uniqueTokenTypes: new Set<string>(),
+    });
+    
+    // Update persistent stats
+    setPersistentStats((prev: any) => {
+      const updated = {
+        ...prev,
+        gamesPlayed: prev.gamesPlayed + 1,
+      };
+      localStorage.setItem('streme-persistent-stats', JSON.stringify(updated));
+      return updated;
+    });
+    
     lastTokenSpawn.current = 0;
     lastRockSpawn.current = 0;
+    lastSpeedBoostSpawn.current = 0;
     
     // Show rock warning for 3 seconds
     setShowRockWarning(true);
@@ -652,7 +1047,8 @@ export function StremeGame() {
         
         {/* Start Screen */}
         {!gameState.isPlaying && !gameState.gameOver && (
-          <div className="game-start">
+          <>
+            <div className="game-start">
             <h3>🌊 SuperInu River</h3>
             <p>Guide SuperInu to catch streaming SuperFluid tokens!</p>
             <p>👆 Tap where you want SuperInu to swim</p>
@@ -695,68 +1091,159 @@ export function StremeGame() {
             <button onClick={() => setShowLeaderboard(true)} className="start-button" style={{marginTop: '8px', background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)'}}>
               🏆 Leaderboard
             </button>
-          </div>
+            </div>
+            
+            {/* Token Icons Ticker - Outside the box */}
+            <div className="token-icons-ticker">
+              <div className="token-icons-scroll">
+                {/* Triple the list for seamless scrolling */}
+                {[...availableTokens, ...availableTokens, ...availableTokens].map((token, index) => (
+                  <img 
+                    key={`${token.symbol}-icon-${index}`} 
+                    src={token.img_url} 
+                    alt={token.symbol} 
+                    className="ticker-token-icon"
+                    onError={(e) => {
+                      e.currentTarget.src = 'https://api.streme.fun/images/streme-icon.png';
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
         )}
 
         {/* Game Over Screen */}
         {gameState.gameOver && (
           <div className="game-over">
-            <h3>🎮 Game Over!</h3>
-            <p>Final Score: {gameState.score}</p>
-            <p>Tokens Collected: {gameState.tokensCollected}</p>
-            <p>Tokens Missed: {gameState.missedTokens}</p>
-            
-            {/* Top Token Collected */}
-            {Object.keys(tokenStats).length > 0 && (() => {
-              const topToken = Object.entries(tokenStats)
-                .sort(([, a], [, b]) => b.count - a.count)[0];
-              if (topToken) {
-                const [symbol, stats] = topToken;
-                return (
-                  <div className="top-token-collected">
-                    <p className="top-token-label">Top Token Collected:</p>
-                    <a 
-                      href={`https://streme.fun/token/${stats.contract_address}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="top-token-link"
-                    >
-                      <div className="top-token-display">
-                        <img src={stats.img_url} alt={stats.name} />
-                        <div className="top-token-info">
-                          <span className="top-token-symbol">{symbol}</span>
-                          <span className="top-token-count">{stats.count}x collected</span>
-                        </div>
+            {gameOverPage === 'stats' ? (
+              <>
+                <h3>📊 Game Stats</h3>
+                <div className="session-stats">
+                  <p>Play Time: <span>{Math.floor((Date.now() - gameMetrics.startTime) / 1000)}s</span></p>
+                  <p>Rocks Spawned: <span>{gameMetrics.rocksSpawned}</span></p>
+                  <p>Rocks Hit: <span>{gameMetrics.rocksHit}</span></p>
+                  <p>Speed Boosts: <span>{gameMetrics.speedBoostsCollected}</span></p>
+                  <p>Hold Bonuses: <span>{gameMetrics.holdBonusTotal}</span></p>
+                  <p>Longest Streak: <span>{gameMetrics.longestStreak}</span></p>
+                  <p>Unique Tokens: <span>{gameMetrics.uniqueTokenTypes.size}</span></p>
+                </div>
+                
+                <div className="lifetime-stats">
+                  <h4>📋 Lifetime Stats</h4>
+                  <p>Total Time Played: <span>{Math.floor(persistentStats.totalTimePlayed / 60)}m {persistentStats.totalTimePlayed % 60}s</span></p>
+                  <p>Games Played: <span>{persistentStats.gamesPlayed}x</span></p>
+                  <p>Best Score: <span>{persistentStats.bestScore}</span></p>
+                  <p>Total Tokens: <span>{persistentStats.totalTokensCollected}</span></p>
+                </div>
+                
+                <button 
+                  className="play-button"
+                  onClick={() => setGameOverPage('main')}
+                >
+                  ⬅️ Back
+                </button>
+              </>
+            ) : (
+              <>
+                <h3>🎮 Game Over!</h3>
+                <p>Final Score: {gameState.score}</p>
+                <p>Tokens Collected: {gameState.tokensCollected}</p>
+                <p>Tokens Missed: {gameState.missedTokens}</p>
+                
+                {/* Top Token Collected */}
+                {Object.keys(tokenStats).length > 0 && (() => {
+                  const topToken = Object.entries(tokenStats)
+                    .sort(([, a], [, b]) => b.count - a.count)[0];
+                  if (topToken) {
+                    const [symbol, stats] = topToken;
+                    return (
+                      <div className="top-token-collected">
+                        <p className="top-token-label">Top Token Collected:</p>
+                        <a 
+                          href={`https://streme.fun/token/${stats.contract_address}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="top-token-link"
+                        >
+                          <div className="top-token-display">
+                            <img src={stats.img_url} alt={stats.name} />
+                            <div className="top-token-info">
+                              <span className="top-token-symbol">{symbol}</span>
+                              <span className="top-token-count">{stats.count}x collected</span>
+                            </div>
+                          </div>
+                        </a>
                       </div>
-                    </a>
-                  </div>
-                );
-              }
-              return null;
-            })()}
-            
-            <button onClick={startGame} className="restart-button">
-              🔄 Play Again
-            </button>
-            
-            <button onClick={() => setShowLeaderboard(true)} className="restart-button" style={{marginTop: '8px', background: 'linear-gradient(135deg, #059669 0%, #10b981 100())'}}>
-              🏆 View Leaderboard
-            </button>
-            
-            <div className="game-over-share">
-              <ShareButton 
-                gameData={{
-                  score: gameState.score,
-                  tokensCollected: gameState.tokensCollected,
-                  level: gameState.level,
-                  rank: undefined, // Will be fetched from server
-                }}
-              />
-              <DonationButton />
-            </div>
+                    );
+                  }
+                  return null;
+                })()}
+                
+                <button 
+                  className="play-button secondary"
+                  onClick={() => setGameOverPage('stats')}
+                  style={{marginTop: '10px'}}
+                >
+                  📊 Stats
+                </button>
+                
+                <button onClick={startGame} className="restart-button">
+                  🔄 Play Again
+                </button>
+                
+                <button onClick={() => setShowLeaderboard(true)} className="restart-button" style={{marginTop: '8px', background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)'}}>
+                  🏆 View Leaderboard
+                </button>
+                
+                <div className="game-over-share">
+                  <ShareButton 
+                    gameData={{
+                      score: gameState.score,
+                      tokensCollected: gameState.tokensCollected,
+                      level: gameState.level,
+                      rank: undefined, // Will be fetched from server
+                    }}
+                  />
+                </div>
+              </>
+            )}
           </div>
         )}
-
+        
+        {/* Tip Link - Outside game over box */}
+        {gameState.gameOver && (
+          <div 
+            onClick={() => window.open('https://farcaster.xyz/koh', '_blank')}
+            style={{
+              position: 'absolute',
+              bottom: '10px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              fontSize: '12px',
+              color: 'rgba(0, 0, 0, 0.7)',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              zIndex: 200,
+              pointerEvents: 'auto',
+              touchAction: 'manipulation',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'rgba(0, 0, 0, 0.9)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'rgba(0, 0, 0, 0.7)';
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            🤖 Buy the dev some AI tokens
+          </div>
+        )}
+        
         {/* Game Playing */}
         {gameState.isPlaying && (
           <>
@@ -845,6 +1332,23 @@ export function StremeGame() {
               </div>
             ))}
 
+            {/* Speed Boosts */}
+            {speedBoosts.map(boost => (
+              <div
+                key={boost.id}
+                className="speed-boost"
+                style={{
+                  left: `${boost.x}px`,
+                  top: `${boost.y}px`,
+                }}
+              >
+                <div className="speed-boost-inner">
+                  <span className="speed-boost-icon">⚡</span>
+                  <span className="speed-boost-text">X2</span>
+                </div>
+              </div>
+            ))}
+
             {/* Touch Ripples */}
             {touchRipples.map(ripple => (
               <div
@@ -859,6 +1363,13 @@ export function StremeGame() {
 
             {/* Simplified Game Stats with Danger Indicator */}
             <div className="game-stats-enhanced">
+              <button 
+                className="trending-button-game"
+                onClick={() => setShowTrending(true)}
+                title="Trending Tokens"
+              >
+                📈
+              </button>
               <div className="primary-score">
                 <span className="score-label">SCORE</span>
                 <span className="score-value">{gameState.score.toLocaleString()}</span>
@@ -866,6 +1377,10 @@ export function StremeGame() {
               <div className="level-indicator">
                 <span className="level-label">LEVEL</span>
                 <span className="level-value">{gameState.level}</span>
+              </div>
+              <div className="rocks-indicator">
+                <span className="rocks-label">ROCKS</span>
+                <span className="rocks-value">{gameMetrics.rocksSpawned}</span>
               </div>
               <div className={`danger-indicator ${gameState.missedTokens >= 7 ? 'danger-zone' : ''}`}>
                 <span className="missed-label">MISSED</span>
@@ -901,10 +1416,41 @@ export function StremeGame() {
                 <span className="warning-icon">🪨</span>
               </div>
             )}
+
+            {/* Speed Boost Burst Effect */}
+            {showSpeedBoostBurst && (
+              <div className="speed-boost-burst">
+                <div className="burst-text">SPEED BOOST X2!</div>
+                <div className="burst-effect"></div>
+              </div>
+            )}
+
+            {/* Speed Boost Indicator */}
+            {hasSpeedBoost && (
+              <div className="speed-boost-indicator">
+                <span className="boost-icon">⚡</span>
+                <span className="boost-timer">SPEED X2</span>
+              </div>
+            )}
+
+            {/* Hold Bonus Indicator */}
+            {isHolding && holdBonusCount > 0 && (
+              <div className="hold-bonus-indicator">
+                <span className="hold-icon">✋</span>
+                <span className="hold-text">HOLD BONUS +{holdBonusCount}</span>
+              </div>
+            )}
+
+            {/* Hold Bonus Popup */}
+            {showHoldBonus && (
+              <div className="hold-bonus-popup">
+                +1 HOLD BONUS!
+              </div>
+            )}
             
             {/* Game Instructions */}
             <div className="game-instructions">
-              <p>🏊‍♂️ Tap to swim • 🪙 Catch SuperFluid tokens • 🪨 Avoid rocks • ❌ Don't miss 10!</p>
+              <p>🏊‍♂️ Tap or use Arrow/WASD keys • 🪙 Catch tokens • 🪨 Avoid rocks • ❌ Don't miss 10!</p>
             </div>
             
             {/* End Adventure Button */}
@@ -930,6 +1476,13 @@ export function StremeGame() {
           onComplete={handleTutorialComplete}
           gameContainerRef={gameRef}
         />
+        
+        {/* Trending Tokens - inside game container */}
+        {showTrending && (
+          <div className="trending-module">
+            <TrendingScreen onClose={() => setShowTrending(false)} />
+          </div>
+        )}
       </div>
       
       {/* Leaderboard Modal */}
