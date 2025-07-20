@@ -157,6 +157,11 @@ export function StremeGame() {
   // Game over screen pages
   const [gameOverPage, setGameOverPage] = useState<'main' | 'stats' | 'final'>('main');
 
+  // Easter egg state
+  const [showEasterEgg, setShowEasterEgg] = useState(false);
+  const lastEasterEggClick = useRef<number>(0);
+  const easterEggClickCount = useRef<number>(0);
+
   // Character position and movement
   const [character, setCharacter] = useState<CharacterPosition>({ x: 0, y: 0 });
   const [targetPosition, setTargetPosition] = useState<CharacterPosition>({ x: 0, y: 0 });
@@ -1196,6 +1201,29 @@ export function StremeGame() {
     }, 3000);
   }, [getCharacterCenterPosition]);
 
+  // Easter egg handler
+  const handleEasterEggClick = useCallback(() => {
+    const now = Date.now();
+    
+    // Reset clicks if more than 2 seconds since last click
+    if (now - lastEasterEggClick.current > 2000) {
+      easterEggClickCount.current = 1;
+    } else {
+      easterEggClickCount.current++;
+      // Trigger Easter egg on 5 rapid clicks
+      if (easterEggClickCount.current >= 5) {
+        setShowEasterEgg(true);
+        easterEggClickCount.current = 0;
+        // Hide Easter egg after 4 seconds
+        setTimeout(() => {
+          setShowEasterEgg(false);
+        }, 4000);
+      }
+    }
+    
+    lastEasterEggClick.current = now;
+  }, []);
+
   // Removed unused parent stats update
 
   return (
@@ -1222,7 +1250,7 @@ export function StremeGame() {
               </div>
             )}
             
-            <div className="preview-character">
+            <div className="preview-character" onClick={handleEasterEggClick} style={{ cursor: 'pointer' }}>
               <img 
                 src="/stremeinu.png" 
                 alt="StremeInu Preview" 
@@ -1491,6 +1519,48 @@ export function StremeGame() {
                 animation: 'superinuPulse 4s ease-out forwards'
               }}
             />
+          </div>
+        )}
+        
+        {/* Easter Egg Popup */}
+        {showEasterEgg && (
+          <div 
+            className="easter-egg-popup"
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10000,
+              pointerEvents: 'none',
+              textAlign: 'center',
+            }}
+          >
+            <img 
+              src="/greeeninu.avif" 
+              alt="Green Inu" 
+              className="easter-egg-greeninu"
+              style={{
+                width: '250px',
+                height: '250px',
+                objectFit: 'contain',
+                animation: 'easterEggSpin 2s ease-in-out',
+                marginBottom: '20px',
+              }}
+            />
+            <div 
+              className="easter-egg-message"
+              style={{
+                color: 'white',
+                fontSize: '24px',
+                fontWeight: 'bold',
+                textShadow: '0 0 30px rgba(16, 185, 129, 0.8), 0 0 60px rgba(34, 211, 238, 0.6)',
+                animation: 'easterEggFadeIn 1s ease-out 1s forwards',
+                opacity: 0,
+              }}
+            >
+              We love you 0xfran and SuperFluid fam! 💚
+            </div>
           </div>
         )}
         
