@@ -273,6 +273,14 @@ const TrendingScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <button className="refresh-button" onClick={() => window.location.reload()}>
             🔄 Refresh
           </button>
+          <a 
+            href="https://streme.fun" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="more-link"
+          >
+            more...
+          </a>
         </div>
       </div>
     </div>

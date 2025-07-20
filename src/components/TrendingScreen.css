@@ -1,38 +1,50 @@
-.trending-overlay {
+/* When used inside game module, we don't need the overlay */
+.trending-module .trending-overlay {
+  position: static;
+  background: none;
+  backdrop-filter: none;
+  z-index: auto;
+  animation: none;
+  display: block;
+  padding: 0;
+}
+
+/* Fixed close button that doesn't scroll */
+.trending-module .trending-panel {
+  position: relative;
+}
+
+.trending-module .close-button {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(12px);
-  z-index: 1000;
-  animation: fadeIn 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+  top: auto;
+  right: auto;
+}
+
+/* Calculate position relative to panel */
+.trending-panel .close-button {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  z-index: 1100;
 }
 
 .trending-panel {
   position: relative;
-  transform: scale(0.9);
-  width: 424px;
-  max-width: 424px;
-  min-width: 424px;
-  max-height: 85vh;
+  transform: scale(0.95);
+  width: 100%;
+  max-width: 380px;
+  height: 90%;
+  max-height: 600px;
   background: linear-gradient(135deg, 
-    #083344 0%,    /* cyan-950 */
-    #164e63 20%,   /* cyan-900 */
-    #155e75 40%,   /* cyan-800 */
-    #0e7490 60%,   /* cyan-700 */
-    #0891b2 100%   /* cyan-600 */
+    rgba(8, 51, 68, 0.98) 0%,
+    rgba(14, 116, 144, 0.95) 50%,
+    rgba(8, 51, 68, 0.98) 100%
   );
   backdrop-filter: blur(20px);
   border-radius: 20px;
   box-shadow: 
-    0 25px 60px rgba(0, 0, 0, 0.5),
-    0 0 30px rgba(34, 211, 238, 0.2),
+    0 20px 40px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(34, 211, 238, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   border: 2px solid rgba(34, 211, 238, 0.4);
   z-index: 1001;
@@ -40,7 +52,8 @@
   opacity: 0;
   visibility: hidden;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  animation: modalFlow 8s ease-in-out infinite alternate;
+  display: flex;
+  flex-direction: column;
 }
 
 .trending-panel.show {
@@ -53,7 +66,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 28px 20px;
+  padding: 20px 24px;
+  padding-right: 60px; /* Make room for fixed close button */
   background: linear-gradient(135deg, 
     rgba(34, 211, 238, 0.1) 0%,
     rgba(103, 232, 249, 0.05) 100%
@@ -88,21 +102,21 @@
 }
 
 .close-button {
-  background: rgba(34, 211, 238, 0.2);
-  border: 2px solid rgba(34, 211, 238, 0.4);
+  background: rgba(239, 68, 68, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.4);
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  font-size: 18px;
+  width: 44px;
+  height: 44px;
+  font-size: 24px;
+  font-weight: bold;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(34, 211, 238, 0.2);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .close-button::before {
@@ -123,9 +137,9 @@
 }
 
 .close-button:hover {
-  transform: scale(1.1) rotate(90deg);
-  color: white;
-  box-shadow: 0 6px 20px rgba(34, 211, 238, 0.4);
+  transform: scale(1.1);
+  background: rgba(220, 38, 38, 1);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
 }
 
 .trending-tabs {
@@ -185,7 +199,7 @@
 
 .trending-content {
   padding: 24px 28px;
-  max-height: 60vh;
+  height: calc(100% - 90px); /* Fixed height to allow scrolling */
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(34, 211, 238, 0.4) transparent;
@@ -551,6 +565,28 @@
   transform: translateY(-2px) scale(1.05);
   box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
   background: linear-gradient(135deg, rgba(168, 85, 247, 0.9), rgba(236, 72, 153, 0.9));
+}
+
+.more-link {
+  display: inline-block;
+  margin-top: 16px;
+  color: rgba(34, 211, 238, 0.9);
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+}
+
+.more-link:hover {
+  color: #67e8f9;
+  background: rgba(34, 211, 238, 0.2);
+  border-color: rgba(34, 211, 238, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2);
 }
 
 @keyframes fadeIn {

@@ -90,8 +90,9 @@
 .tutorial-message {
   position: absolute;
   top: 20px; /* Position at top with padding */
-  left: 50%;
-  transform: translateX(-50%); /* Center horizontally only */
+  left: 0;
+  right: 0;
+  margin: 0 auto; /* Center with margin auto */
   background: linear-gradient(135deg, 
     rgba(8, 51, 68, 0.98) 0%,
     rgba(14, 116, 144, 0.95) 100%

@@ -32,35 +32,49 @@ const tutorialSteps: TutorialStep[] = [
   {
     id: 2,
     title: "How to Move 🎮",
-    message: "Tap anywhere on the screen to guide SuperInu to that spot!",
+    message: "Tap/click to move incrementally, or use Arrow/WASD keys. Hold down to keep moving!",
     highlight: { element: "game-area" },
     action: "try"
   },
   {
     id: 3,
-    title: "Collect Tokens 🪙",
-    message: "Swim into the floating tokens to collect them. Each token has different values!",
-    highlight: { element: "token-example" },
+    title: "Hold for Bonus! ✋",
+    message: "Hold down anywhere for continuous movement. Every 2 seconds of holding gives you +1 bonus point!",
+    highlight: { element: "game-area" },
     action: "next"
   },
   {
     id: 4,
-    title: "Avoid Rocks! 🪨",
-    message: "Dangerous rocks appear in the river! Swim around them or you'll lose a life!",
-    highlight: { element: "rock-example" },
+    title: "Collect Tokens 🪙",
+    message: "Swim into the floating tokens to collect them. Each token has different values based on market cap!",
+    highlight: { element: "token-example" },
     action: "next"
   },
   {
     id: 5,
+    title: "Speed Boosts! ⚡",
+    message: "Golden orbs with ⚡X2 give you double speed for 5 seconds! They appear every 15-25 seconds.",
+    highlight: { element: "game-area" },
+    action: "next"
+  },
+  {
+    id: 6,
+    title: "Avoid Rocks! 🪨",
+    message: "Dangerous rocks appear in the river (max 3 at once). Swim around them or you'll lose a life!",
+    highlight: { element: "rock-example" },
+    action: "next"
+  },
+  {
+    id: 7,
     title: "Watch Out! ⚠️",
     message: "Don't miss too many tokens! If you miss 10, the game ends.",
     highlight: { element: "missed-counter" },
     action: "next"
   },
   {
-    id: 6,
-    title: "Score Big! 🏆",
-    message: "Higher market cap tokens = more points! Look for the glowing ones!",
+    id: 8,
+    title: "Ready to Play! 🎮",
+    message: "Collect tokens, grab speed boosts, avoid rocks, and hold for bonus points! Good luck!",
     action: "start"
   }
 ];

@@ -21,6 +21,17 @@ export interface LeaderboardEntry {
     name: string;
     img_url: string;
   }>;
+  // New gameplay metrics
+  gameplayStats?: {
+    playTime: number; // in seconds
+    missedTokens: number;
+    rocksHit: number;
+    speedBoostsCollected: number;
+    holdBonusTotal: number;
+    longestStreak: number;
+    totalTokenValue: number;
+    uniqueTokenTypes: number;
+  };
 }
 
 interface LeaderboardResponse {

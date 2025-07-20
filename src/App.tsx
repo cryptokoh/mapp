@@ -1,19 +1,17 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { sdk } from '@farcaster/frame-sdk'
 import { StremeGame } from './components/StremeGame'
 
 // Debug: Test if component loads
 console.log('🎮 App.tsx is loading...');
 import { SplashScreen } from './components/SplashScreen'
-import TrendingScreen from './components/TrendingScreen'
 import './App.css'
 
 // Removed unused GameStats interface
 
 function App() {
   const [showSplash, setShowSplash] = useState(true)
-  const [showTrending, setShowTrending] = useState(false)
 
   useEffect(() => {
     // Get user context
@@ -66,13 +64,6 @@ function App() {
         transition={{ duration: 0.6, delay: 0.2 }}
       >
         <h1>🌊 SuperInu River</h1>
-        <button 
-          className="trending-button"
-          onClick={() => setShowTrending(true)}
-          title="Trending"
-        >
-          📈
-        </button>
       </motion.header>
       
       <main className="app-main">
@@ -102,30 +93,6 @@ function App() {
         </div>
       </motion.footer>
 
-      <AnimatePresence>
-        {showTrending && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.3 }}
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 100,
-              background: 'rgba(0, 0, 0, 0.8)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <TrendingScreen onClose={() => setShowTrending(false)} />
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   )
 }
