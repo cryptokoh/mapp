@@ -58,7 +58,17 @@ class SupabaseLeaderboardService {
           img_url: entry.favorite_token_img || ''
         } : undefined,
         tokenStats: entry.token_stats,
-        gameplayStats: entry.gameplay_stats
+        gameplayStats: entry.gameplay_stats ? {
+          playTime: entry.gameplay_stats.playTime || 0,
+          missedTokens: entry.gameplay_stats.missedTokens || 0,
+          rocksHit: entry.gameplay_stats.rocksHit || 0,
+          rocksSpawned: entry.gameplay_stats.rocksSpawned || 0,
+          speedBoostsCollected: entry.gameplay_stats.speedBoostsCollected || 0,
+          holdBonusTotal: entry.gameplay_stats.holdBonusTotal || 0,
+          longestStreak: entry.gameplay_stats.longestStreak || 0,
+          totalTokenValue: entry.gameplay_stats.totalTokenValue || 0,
+          uniqueTokenTypes: entry.gameplay_stats.uniqueTokenTypes || 0
+        } : undefined
       }))
 
       console.log('✅ Supabase leaderboard loaded:', entries.length, 'entries')
@@ -187,7 +197,17 @@ class SupabaseLeaderboardService {
           img_url: data.favorite_token_img || ''
         } : undefined,
         tokenStats: data.token_stats,
-        gameplayStats: data.gameplay_stats
+        gameplayStats: data.gameplay_stats ? {
+          playTime: data.gameplay_stats.playTime || 0,
+          missedTokens: data.gameplay_stats.missedTokens || 0,
+          rocksHit: data.gameplay_stats.rocksHit || 0,
+          rocksSpawned: data.gameplay_stats.rocksSpawned || 0,
+          speedBoostsCollected: data.gameplay_stats.speedBoostsCollected || 0,
+          holdBonusTotal: data.gameplay_stats.holdBonusTotal || 0,
+          longestStreak: data.gameplay_stats.longestStreak || 0,
+          totalTokenValue: data.gameplay_stats.totalTokenValue || 0,
+          uniqueTokenTypes: data.gameplay_stats.uniqueTokenTypes || 0
+        } : undefined
       }
     } catch (error) {
       console.error('❌ Failed to get user best score:', error)

@@ -5,6 +5,7 @@ import { Leaderboard } from './Leaderboard';
 import { supabaseLeaderboardService } from '../services/supabaseLeaderboard';
 import { useFarcaster } from '../hooks/useFarcaster';
 import { tokenService, type StremeToken } from '../services/tokenService';
+import { notificationService } from '../services/notificationService';
 import { TokenCollectedPopup } from './TokenCollectedPopup';
 import { Tutorial } from './Tutorial';
 import TrendingScreen from './TrendingScreen';
@@ -624,7 +625,16 @@ export function StremeGame() {
 
     setBlueBoxes(prev => [...prev, newBlueBox]);
     console.log('💙 Spawned special blue box!');
-  }, [getGameDimensions]);
+    
+    // Send notification if enabled
+    if (notificationService.checkPermission() === 'granted' && gameState.isPlaying) {
+      notificationService.showNotification('Special Blue Box Alert! 💙', {
+        body: 'A special blue box worth 500 points is in the river! Catch it before it escapes!',
+        tag: 'bluebox',
+        requireInteraction: false,
+      });
+    }
+  }, [getGameDimensions, gameState.isPlaying]);
 
   // Check collision between character and blue box
   const checkBlueBoxCollision = useCallback((char: CharacterPosition, box: BlueBox) => {
@@ -929,6 +939,15 @@ export function StremeGame() {
       setBlueBoxExplosions(prev => 
         prev.filter(explosion => Date.now() - explosion.timestamp < 1500)
       );
+      
+      // Clean up score popups (show for 1 second)
+      setScorePopups(prev => 
+        prev.filter(popup => {
+          // Using the id which contains timestamp
+          const timestamp = parseInt(popup.id.split('-')[2] || '0');
+          return Date.now() - timestamp < 1000;
+        })
+      );
 
       // Update score and level progression
       setGameState(prev => {
@@ -999,6 +1018,17 @@ export function StremeGame() {
               },
             }).then(leaderboardEntry => {
               console.log('🏆 Score submitted to server:', leaderboardEntry);
+              
+              // Check if this is a new high score and send notification
+              const persistentStats = JSON.parse(localStorage.getItem('streme-persistent-stats') || '{}');
+              if (prev.score === persistentStats.bestScore && notificationService.checkPermission() === 'granted') {
+                notificationService.notifyHighScore(prev.score);
+              }
+              
+              // If rank is top 10, send leaderboard notification
+              if (leaderboardEntry.rank && leaderboardEntry.rank <= 10 && notificationService.checkPermission() === 'granted') {
+                notificationService.notifyLeaderboardRank(leaderboardEntry.rank);
+              }
             }).catch(error => {
               console.error('❌ Failed to submit score:', error);
               if (error.message.includes('Only Farcaster users')) {
@@ -1049,6 +1079,9 @@ export function StremeGame() {
     setTokens([]);
     setRocks([]);
     setSpeedBoosts([]);
+    setBlueBoxes([]);
+    setBlueBoxExplosions([]);
+    setScorePopups([]);
     setHasSpeedBoost(false);
     setShowSpeedBoostBurst(false);
     setCollectedTokenPopups([]);
@@ -1111,6 +1144,9 @@ export function StremeGame() {
     setTokens([]);
     setRocks([]);
     setSpeedBoosts([]);
+    setBlueBoxes([]);
+    setBlueBoxExplosions([]);
+    setScorePopups([]);
     setHasSpeedBoost(false);
     setShowSpeedBoostBurst(false);
     setCollectedTokenPopups([]);
@@ -1563,6 +1599,20 @@ export function StremeGame() {
                 }}
               >
                 THE BASE APP!!
+              </div>
+            ))}
+
+            {/* Score Popups */}
+            {scorePopups.map(popup => (
+              <div
+                key={popup.id}
+                className="score-popup"
+                style={{
+                  left: `${popup.x}px`,
+                  top: `${popup.y}px`,
+                }}
+              >
+                +{popup.value}
               </div>
             ))}
 

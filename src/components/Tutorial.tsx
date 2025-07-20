@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { notificationService } from '../services/notificationService';
 import './Tutorial.css';
 
 interface TutorialStep {
@@ -66,13 +67,19 @@ const tutorialSteps: TutorialStep[] = [
   },
   {
     id: 7,
+    title: "Stay Updated! 🔔",
+    message: "Get notified about special blue boxes, rare tokens, and leaderboard updates! Enable notifications to never miss exciting events.",
+    action: "notification"
+  },
+  {
+    id: 8,
     title: "Watch Out! ⚠️",
     message: "Don't miss too many tokens! If you miss 10, the game ends.",
     highlight: { element: "missed-counter" },
     action: "next"
   },
   {
-    id: 8,
+    id: 9,
     title: "Ready to Play! 🎮",
     message: "Collect tokens, grab speed boosts, avoid rocks, and hold for bonus points! Good luck!",
     action: "start"
@@ -82,11 +89,26 @@ const tutorialSteps: TutorialStep[] = [
 export function Tutorial({ isOpen, onComplete, gameContainerRef }: TutorialProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [notificationStatus, setNotificationStatus] = useState<'pending' | 'granted' | 'denied' | 'unsupported'>('pending');
 
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(0);
       setHasInteracted(false);
+      
+      // Check notification support and permission status
+      if (!notificationService.isSupported()) {
+        setNotificationStatus('unsupported');
+      } else {
+        const permission = notificationService.checkPermission();
+        if (permission === 'granted') {
+          setNotificationStatus('granted');
+        } else if (permission === 'denied') {
+          setNotificationStatus('denied');
+        } else {
+          setNotificationStatus('pending');
+        }
+      }
     }
   }, [isOpen]);
 
@@ -106,6 +128,16 @@ export function Tutorial({ isOpen, onComplete, gameContainerRef }: TutorialProps
   const handleTryInteraction = () => {
     setHasInteracted(true);
     // Auto-advance after trying
+    setTimeout(() => {
+      handleNext();
+    }, 1500);
+  };
+
+  const handleNotificationPermission = async () => {
+    const granted = await notificationService.requestPermission();
+    setNotificationStatus(granted ? 'granted' : 'denied');
+    
+    // Auto-advance after a short delay
     setTimeout(() => {
       handleNext();
     }, 1500);
@@ -219,6 +251,41 @@ export function Tutorial({ isOpen, onComplete, gameContainerRef }: TutorialProps
                 >
                   Let me try! 🎯
                 </button>
+              ) : currentStepData.action === 'notification' ? (
+                <>
+                  {notificationStatus === 'pending' && (
+                    <button 
+                      className="tutorial-button primary"
+                      onClick={handleNotificationPermission}
+                    >
+                      Enable Notifications 🔔
+                    </button>
+                  )}
+                  {notificationStatus === 'granted' && (
+                    <button 
+                      className="tutorial-button primary success"
+                      onClick={handleNext}
+                    >
+                      ✅ Notifications Enabled!
+                    </button>
+                  )}
+                  {notificationStatus === 'denied' && (
+                    <button 
+                      className="tutorial-button primary"
+                      onClick={handleNext}
+                    >
+                      Continue Without Notifications →
+                    </button>
+                  )}
+                  {notificationStatus === 'unsupported' && (
+                    <button 
+                      className="tutorial-button primary"
+                      onClick={handleNext}
+                    >
+                      Continue →
+                    </button>
+                  )}
+                </>
               ) : currentStepData.action === 'start' ? (
                 <button 
                   className="tutorial-button primary large"

@@ -780,6 +780,36 @@
   animation: explodeText 1.5s ease-out forwards;
 }
 
+/* Score Popup */
+.score-popup {
+  position: absolute;
+  z-index: 20;
+  font-size: 32px;
+  font-weight: 900;
+  color: #60a5fa;
+  text-shadow: 
+    0 0 20px rgba(96, 165, 250, 0.8),
+    0 0 30px rgba(59, 130, 246, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  animation: scoreFloat 1.5s ease-out forwards;
+}
+
+@keyframes scoreFloat {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    transform: translateY(-20px) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-80px) scale(0.8);
+    opacity: 0;
+  }
+}
+
 @keyframes explodeText {
   0% {
     transform: scale(0) rotate(0deg);
