@@ -133,6 +133,7 @@ export function Tutorial({ isOpen, onComplete, gameContainerRef }: TutorialProps
     }, 1500);
   };
 
+
   const handleNotificationPermission = async () => {
     const granted = await notificationService.requestPermission();
     setNotificationStatus(granted ? 'granted' : 'denied');

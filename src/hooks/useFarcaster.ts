@@ -48,6 +48,16 @@ export function useFarcaster(): FarcasterContext {
           setUser(farcasterUser);
           setIsAuthenticated(true);
           console.log('🔗 Farcaster user authenticated:', farcasterUser.username);
+
+          // Automatically add miniapp to Farcaster
+          try {
+            console.log('📱 Automatically adding miniapp to Farcaster...');
+            await sdk.actions.addMiniApp();
+            console.log('📱 Miniapp added successfully on initialization!');
+          } catch (addError: any) {
+            console.log('📱 Miniapp addition on init:', addError.code === 'RejectedByUser' ? 'User declined' : `Error: ${addError.message}`);
+            // Don't throw error - this is optional functionality
+          }
         } else {
           console.log('🔗 No Farcaster user context available - deployment mode');
           setUser(null);
