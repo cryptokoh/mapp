@@ -1456,53 +1456,113 @@
 /* Token Icons Ticker */
 .token-icons-ticker {
   position: absolute;
-  top: 80px; /* Move to top of screen */
+  top: 10px; /* Raised by 30px more */
   left: 0;
   right: 0;
-  height: 60px;
-  overflow: hidden;
+  height: 140px; /* Increased height for more breathing room */
+  overflow: visible; /* Allow glow effects to show */
   display: flex;
   align-items: center;
   z-index: 1;
+  padding: 20px 0; /* Increased padding to contain glow */
+  box-sizing: border-box;
+  mask-image: linear-gradient(to right, 
+    transparent 0%, 
+    black 5%, 
+    black 95%, 
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(to right, 
+    transparent 0%, 
+    black 5%, 
+    black 95%, 
+    transparent 100%
+  );
 }
 
 
 .token-icons-scroll {
   display: flex;
   gap: 40px; /* Increase gap for better spacing */
-  animation: scroll-right-to-left 60s linear infinite; /* Slower animation */
+  animation: scroll-right-to-left 120s linear infinite; /* Even slower animation */
+  /* Removed animation-delay for immediate start */
   padding: 0 20px;
   width: fit-content;
   will-change: transform; /* Optimize animation performance */
   align-items: center;
+  /* Removed transform to start in view */
+}
+
+/* Ticker token item container */
+.ticker-token-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 0 20px;
 }
 
 .ticker-token-icon {
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid rgba(255, 255, 255, 0.4);
   box-shadow: 
-    0 0 20px rgba(255, 255, 255, 0.3),
-    0 0 40px rgba(255, 255, 255, 0.2),
-    0 2px 8px rgba(0, 0, 0, 0.2);
+    0 0 15px rgba(255, 255, 255, 0.25),
+    0 0 30px rgba(255, 255, 255, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.2);
   transition: transform 0.3s ease;
   flex-shrink: 0;
 }
 
-.ticker-token-icon:hover {
+/* Token name and symbol info */
+.ticker-token-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.ticker-token-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.ticker-token-symbol {
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Hover effect on entire token item */
+.ticker-token-item:hover .ticker-token-icon {
   transform: scale(1.1);
   border-color: rgba(255, 255, 255, 0.8);
   box-shadow: 
-    0 0 30px rgba(255, 255, 255, 0.5),
-    0 0 50px rgba(255, 255, 255, 0.3),
+    0 0 20px rgba(255, 255, 255, 0.4),
+    0 0 35px rgba(255, 255, 255, 0.25),
     0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.ticker-token-item:hover .ticker-token-name {
+  color: #22d3ee;
+  text-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+}
+
+.ticker-token-item:hover .ticker-token-symbol {
+  color: white;
 }
 
 .ticker-promo-text {
   color: white;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   text-shadow: 
     0 0 20px rgba(255, 255, 255, 0.5),
@@ -1516,21 +1576,34 @@
 /* Responsive adjustments for mobile */
 @media (max-width: 500px) {
   .token-icons-ticker {
-    top: 60px; /* Adjust for smaller screens */
-    height: 50px;
+    top: 5px; /* Raised by 30px for mobile too */
+    height: 120px; /* Increased height on mobile too */
+    padding: 15px 0; /* More padding on mobile */
+  }
+  
+  .ticker-token-item {
+    margin: 0 15px;
   }
   
   .ticker-token-icon {
-    width: 35px;
-    height: 35px;
+    width: 40px;
+    height: 40px;
+  }
+  
+  .ticker-token-name {
+    font-size: 11px;
+  }
+  
+  .ticker-token-symbol {
+    font-size: 9px;
   }
   
   .token-icons-scroll {
-    gap: 30px;
+    gap: 20px;
   }
   
   .ticker-promo-text {
-    font-size: 14px;
+    font-size: 16px;
     padding: 0 40px;
   }
 }

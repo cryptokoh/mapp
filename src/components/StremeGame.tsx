@@ -1283,15 +1283,20 @@ export function StremeGame() {
               <div className="token-icons-scroll">
                 {/* First set of tokens */}
                 {availableTokens.map((token, index) => (
-                  <img 
-                    key={`${token.symbol}-icon-1-${index}`} 
-                    src={token.img_url} 
-                    alt={token.symbol} 
-                    className="ticker-token-icon"
-                    onError={(e) => {
-                      e.currentTarget.src = 'https://api.streme.fun/images/streme-icon.png';
-                    }}
-                  />
+                  <div key={`${token.symbol}-1-${index}`} className="ticker-token-item">
+                    <img 
+                      src={token.img_url} 
+                      alt={token.symbol} 
+                      className="ticker-token-icon"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://api.streme.fun/images/streme-icon.png';
+                      }}
+                    />
+                    <div className="ticker-token-info">
+                      <span className="ticker-token-name">{token.name}</span>
+                      <span className="ticker-token-symbol">${token.symbol}</span>
+                    </div>
+                  </div>
                 ))}
                 
                 {/* Promotional text */}
@@ -1301,15 +1306,20 @@ export function StremeGame() {
                 
                 {/* Second set of tokens */}
                 {availableTokens.map((token, index) => (
-                  <img 
-                    key={`${token.symbol}-icon-2-${index}`} 
-                    src={token.img_url} 
-                    alt={token.symbol} 
-                    className="ticker-token-icon"
-                    onError={(e) => {
-                      e.currentTarget.src = 'https://api.streme.fun/images/streme-icon.png';
-                    }}
-                  />
+                  <div key={`${token.symbol}-2-${index}`} className="ticker-token-item">
+                    <img 
+                      src={token.img_url} 
+                      alt={token.symbol} 
+                      className="ticker-token-icon"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://api.streme.fun/images/streme-icon.png';
+                      }}
+                    />
+                    <div className="ticker-token-info">
+                      <span className="ticker-token-name">{token.name}</span>
+                      <span className="ticker-token-symbol">${token.symbol}</span>
+                    </div>
+                  </div>
                 ))}
                 
                 {/* Promotional text again for seamless loop */}
