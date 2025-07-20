@@ -1456,7 +1456,7 @@
 /* Token Icons Ticker */
 .token-icons-ticker {
   position: absolute;
-  bottom: 40px;
+  top: calc(50% - 200px); /* Position above the centered start box */
   left: 0;
   right: 0;
   height: 60px;
@@ -1469,12 +1469,35 @@
   z-index: 1;
 }
 
+/* Gradient fade on edges */
+.token-icons-ticker::before,
+.token-icons-ticker::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.token-icons-ticker::before {
+  left: 0;
+  background: linear-gradient(to right, rgba(1, 15, 41, 0.8), transparent);
+}
+
+.token-icons-ticker::after {
+  right: 0;
+  background: linear-gradient(to left, rgba(1, 15, 41, 0.8), transparent);
+}
+
 .token-icons-scroll {
   display: flex;
   gap: 20px;
-  animation: scroll-right-to-left 30s linear infinite;
+  animation: scroll-right-to-left 40s linear infinite;
   padding: 0 20px;
   width: fit-content;
+  will-change: transform; /* Optimize animation performance */
 }
 
 .ticker-token-icon {
@@ -1491,6 +1514,23 @@
 .ticker-token-icon:hover {
   transform: scale(1.1);
   border-color: rgba(34, 211, 238, 0.6);
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 500px) {
+  .token-icons-ticker {
+    top: calc(50% - 180px); /* Adjust for smaller screens */
+    height: 50px;
+  }
+  
+  .ticker-token-icon {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .token-icons-scroll {
+    gap: 15px;
+  }
 }
 
 @keyframes scroll-right-to-left {
