@@ -48,8 +48,67 @@ interface LeaderboardResponse {
   };
 }
 
-// In-memory storage (in production, use a proper database)
-let leaderboardData: LeaderboardEntry[] = [];
+// Using jsonstorage.net - free, no auth required, 20MB limit
+const STORAGE_ID = process.env.JSON_STORAGE_ID || 'superinu-leaderboard-2024';
+const STORAGE_URL = `https://api.jsonstorage.net/v1/json/${STORAGE_ID}`;
+
+// In-memory cache
+let cachedData: { entries: LeaderboardEntry[], lastFetch: number } | null = null;
+const CACHE_DURATION = 5000; // 5 seconds
+
+async function fetchLeaderboardData(): Promise<LeaderboardEntry[]> {
+  // Check cache first
+  if (cachedData && Date.now() - cachedData.lastFetch < CACHE_DURATION) {
+    return cachedData.entries;
+  }
+
+  try {
+    const response = await fetch(STORAGE_URL);
+    
+    if (response.status === 404) {
+      // First time - initialize empty leaderboard
+      await saveLeaderboardData([]);
+      return [];
+    }
+
+    if (!response.ok) {
+      throw new Error(`Storage API error: ${response.status}`);
+    }
+
+    const entries = await response.json() as LeaderboardEntry[];
+    
+    // Update cache
+    cachedData = { entries, lastFetch: Date.now() };
+    
+    return entries;
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error);
+    return cachedData?.entries || [];
+  }
+}
+
+async function saveLeaderboardData(entries: LeaderboardEntry[]): Promise<void> {
+  try {
+    const response = await fetch(STORAGE_URL, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(entries),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Storage API error: ${response.status}`);
+    }
+
+    // Update cache
+    cachedData = { entries, lastFetch: Date.now() };
+  } catch (error) {
+    console.error('Error saving leaderboard:', error);
+    // Keep data in cache even if save fails
+    cachedData = { entries, lastFetch: Date.now() };
+  }
+}
 
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext): Promise<{
   statusCode: number;
@@ -78,12 +137,25 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
 
     // GET /leaderboard - Get leaderboard entries
     if (method === "GET" && path.includes("/leaderboard")) {
-      const sortedEntries = leaderboardData
+      const allEntries = await fetchLeaderboardData();
+      
+      // Group by player and get their best score
+      const bestScoresByPlayer = new Map<number, LeaderboardEntry>();
+      
+      allEntries.forEach(entry => {
+        const existing = bestScoresByPlayer.get(entry.fid);
+        if (!existing || entry.score > existing.score) {
+          bestScoresByPlayer.set(entry.fid, entry);
+        }
+      });
+      
+      // Convert to array and sort by score
+      const sortedEntries = Array.from(bestScoresByPlayer.values())
         .sort((a, b) => b.score - a.score)
         .slice(0, 100) // Limit to top 100
         .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
-      const uniquePlayers = new Set(sortedEntries.map(e => e.fid)).size;
+      const uniquePlayers = bestScoresByPlayer.size;
       const highestScore = sortedEntries.length > 0 ? sortedEntries[0].score : 0;
 
       const response: LeaderboardResponse = {
@@ -91,7 +163,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
         data: sortedEntries,
         stats: {
           totalPlayers: uniquePlayers,
-          totalScores: leaderboardData.length,
+          totalScores: allEntries.length,
           highestScore,
         },
       };
@@ -150,18 +222,21 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
         gameplayStats: entryData.gameplayStats,
       };
 
-      // Add to leaderboard
-      leaderboardData.push(newEntry);
+      // Get current data and add new entry
+      const currentEntries = await fetchLeaderboardData();
+      currentEntries.push(newEntry);
 
-      // Keep only recent entries to prevent memory issues (in production, use proper DB)
-      if (leaderboardData.length > 1000) {
-        leaderboardData = leaderboardData
-          .sort((a, b) => b.timestamp - a.timestamp)
-          .slice(0, 500);
+      // Keep only recent entries (last 500 games)
+      if (currentEntries.length > 500) {
+        currentEntries.sort((a, b) => b.timestamp - a.timestamp);
+        currentEntries.splice(500);
       }
 
+      // Save back to storage
+      await saveLeaderboardData(currentEntries);
+
       // Calculate rank
-      const sortedEntries = leaderboardData.sort((a, b) => b.score - a.score);
+      const sortedEntries = currentEntries.sort((a, b) => b.score - a.score);
       const rank = sortedEntries.findIndex(e => e.id === newEntry.id) + 1;
       newEntry.rank = rank;
 
@@ -195,7 +270,9 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
         };
       }
 
-      const userEntries = leaderboardData.filter(e => e.fid === fid);
+      const allEntries = await fetchLeaderboardData();
+      const userEntries = allEntries.filter(e => e.fid === fid);
+      
       if (userEntries.length === 0) {
         const response: LeaderboardResponse = {
           success: false,
@@ -212,8 +289,19 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext): P
         current.score > best.score ? current : best
       );
 
-      const sortedEntries = leaderboardData.sort((a, b) => b.score - a.score);
-      const rank = sortedEntries.findIndex(e => e.fid === fid && e.score === bestEntry.score) + 1;
+      // Calculate rank among deduplicated scores
+      const bestScoresByPlayer = new Map<number, number>();
+      allEntries.forEach(entry => {
+        const existing = bestScoresByPlayer.get(entry.fid);
+        if (!existing || entry.score > existing) {
+          bestScoresByPlayer.set(entry.fid, entry.score);
+        }
+      });
+
+      const sortedScores = Array.from(bestScoresByPlayer.entries())
+        .sort((a, b) => b[1] - a[1]);
+      
+      const rank = sortedScores.findIndex(([playerFid]) => playerFid === fid) + 1;
       bestEntry.rank = rank;
 
       const response: LeaderboardResponse = {

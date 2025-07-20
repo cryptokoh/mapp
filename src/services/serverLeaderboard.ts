@@ -195,7 +195,18 @@ class ServerLeaderboardService {
       if (!stored) return [];
       
       const entries: LeaderboardEntry[] = JSON.parse(stored);
-      return entries
+      
+      // Deduplicate by player, keeping best score
+      const bestScoresByPlayer = new Map<number, LeaderboardEntry>();
+      entries.forEach(entry => {
+        const existing = bestScoresByPlayer.get(entry.fid);
+        if (!existing || entry.score > existing.score) {
+          bestScoresByPlayer.set(entry.fid, entry);
+        }
+      });
+      
+      // Convert to array and sort
+      return Array.from(bestScoresByPlayer.values())
         .sort((a, b) => b.score - a.score)
         .slice(0, 100)
         .map((entry, index) => ({ ...entry, rank: index + 1 }));
@@ -254,14 +265,22 @@ class ServerLeaderboardService {
   }
 
   private getStatsLocal(): { totalPlayers: number; totalScores: number; highestScore: number } {
-    const entries = this.getLocalFallback();
-    const uniquePlayers = new Set(entries.map(e => e.fid)).size;
-    
-    return {
-      totalPlayers: uniquePlayers,
-      totalScores: entries.length,
-      highestScore: entries.length > 0 ? entries[0].score : 0,
-    };
+    try {
+      const stored = localStorage.getItem(this.fallbackStorage);
+      if (!stored) return { totalPlayers: 0, totalScores: 0, highestScore: 0 };
+      
+      const allEntries: LeaderboardEntry[] = JSON.parse(stored);
+      const deduplicatedEntries = this.getLocalFallback();
+      
+      return {
+        totalPlayers: deduplicatedEntries.length, // Number of unique players
+        totalScores: allEntries.length, // Total number of games played
+        highestScore: deduplicatedEntries.length > 0 ? deduplicatedEntries[0].score : 0,
+      };
+    } catch (error) {
+      console.error('Error getting local stats:', error);
+      return { totalPlayers: 0, totalScores: 0, highestScore: 0 };
+    }
   }
 
   // Clear all data (for development)
